@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "QuickType (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "QuickType (Unpackaged)": {
+      "commandName": "Project",
+      "nativeDebugging": true
+    }
+  }
+}
