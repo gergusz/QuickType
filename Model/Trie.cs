@@ -21,12 +21,7 @@ namespace QuickType.Model
 
             foreach (var letter in word)
             {
-                if (!current.Children.TryGetValue(letter, out TrieNode? value))
-                {
-                    value = new();
-                    current.Children[letter] = value;
-                }
-                current = value;
+                current = current.AddChild(letter);
             }
 
             current.IsEndOfWord = true;
@@ -39,11 +34,8 @@ namespace QuickType.Model
 
             foreach (var letter in word)
             {
-                if (!current.Children.TryGetValue(letter, out TrieNode? value))
-                {
-                    return false;
-                }
-                current = value;
+                current = current.GetChild(letter);
+                if (current is null) return false;
             }
 
             return current.IsEndOfWord;
@@ -56,11 +48,8 @@ namespace QuickType.Model
 
             foreach (var letter in prefix)
             {
-                if (!current.Children.TryGetValue(letter, out TrieNode? value))
-                {
-                    return result;
-                }
-                current = value;
+                current = current.GetChild(letter);
+                if (current is null) return result;
             }
 
             DFS(current, prefix, result);
@@ -74,9 +63,9 @@ namespace QuickType.Model
                 result.Add((currentWord, node.Frequency));
             }
 
-            foreach (var child in node.Children)
+            foreach (var (key, child) in node.Children)
             {
-                DFS(child.Value, currentWord + child.Key, result);
+                DFS(child, currentWord + key, result);
             }
         }
     }
