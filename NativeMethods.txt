@@ -17,3 +17,13 @@ LPARAM
 WM_SYSKEYDOWN
 WM_KEYFIRST
 WM_KEYLAST
+GetForegroundWindow
+GetGUIThreadInfo
+AccessibleObjectFromWindow
+IAccessible
+accLocation
+IAccessible::accLocation
+UIAutomationClient
+OBJID_CURSOR
+IID_IAccessible
+ClientToScreen

@@ -5,13 +5,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Text.RegularExpressions;
 
 namespace QuickType.Model.Languages
 {
-    internal class Hungarian : ILanguage
+    internal partial class Hungarian : ILanguage
     {
         private Trie Trie { get; set; }
         public string Name => "Hungarian";
+
+        [GeneratedRegex(@"([a-z]+)|([A-Z]+)|([áéóöőúüűí]+)|([ÁÉÓÖŐÚÜŰÍ]+)")]
+        private static partial Regex ValidCharsRegex();
 
         public Hungarian(string path)
         {
@@ -26,6 +30,9 @@ namespace QuickType.Model.Languages
                 if (line == "word,freq") continue;
                 var parts = line.Split(',');
                 var word = parts[0];
+                if (!ValidCharsRegex().Match(word).Success) {
+                    continue;
+                }
                 var freq = int.Parse(parts[1]);
                 Trie.Insert(word, freq);
             }

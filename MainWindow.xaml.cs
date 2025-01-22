@@ -29,6 +29,8 @@ namespace QuickType
     /// </summary>
     public sealed partial class MainWindow : Window
     {
+        public static string CurrentBuffer { get; set; }
+
         public MainWindow()
         {
             this.InitializeComponent();
@@ -54,22 +56,65 @@ namespace QuickType
         {
             if (str == "\b")
             {
-                TextInputLabel.Text = $"{TextInputLabel.Text[..^1]}";
-            } else
+                if (CurrentBuffer.Length <= 1)
+                {
+                    CurrentBuffer = "";
+                }
+                else
+                {
+                    CurrentBuffer = CurrentBuffer[..^1];
+                }
+            }
+            else if (str == "\r" || str == " ")
             {
-                TextInputLabel.Text = $"{TextInputLabel.Text + str}";
+                CurrentBuffer = "";
+            }
+            else
+            {
+                CurrentBuffer += str;
             }
 
-            List<Word> wordlist = App.Current.Language.SearchByPrefix(TextInputLabel.Text.ToLower());
+            TextInputLabel.Text = $"Current buffer: {CurrentBuffer}";
 
-            StringBuilder sb = new();
-            if (wordlist.Count < 1) return;
-            wordlist[..Math.Min(wordlist.Count, 10)].ForEach(word => sb.AppendLine(word.word));
-
-            SuggestionsTextBlock.Text = sb.ToString();
+            if (CurrentBuffer.Length > 2 && !string.IsNullOrWhiteSpace(CurrentBuffer))
+            {
+                GetSuggestions();
+            } else
+            {
+                SuggestionsTextBlock.Text = "Too few chars (<2), or just whitespace!";
+            }
+    
+            FindCaret();
 
         }
 
+        private void GetSuggestions()
+        {
+            List<Word> wordlist = App.Current.Language.SearchByPrefix(CurrentBuffer.ToLower());
 
+            StringBuilder sb = new();
+            if (wordlist.Count < 1)
+            {
+                SuggestionsTextBlock.Text = "This word is not recognised! Something went wrong?";
+                return;
+            }
+            wordlist[..Math.Min(wordlist.Count, 10)].ForEach(word => sb.AppendLine($"{word.word} ({word.frequency})"));
+
+            SuggestionsTextBlock.Text = sb.ToString();
+        }
+
+        private void FindCaret()
+        {
+            CaretFinder.CaretRectangle? caretRectangle = CaretFinder.GetCaretPos();
+
+            if (caretRectangle is not null)
+            {
+                CaretPosition.Text = caretRectangle.ToString();
+            }
+            else
+            {
+                CaretPosition.Text = "Caret not found!";
+            }
+        }
     }
 }

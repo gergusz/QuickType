@@ -55,7 +55,6 @@ namespace QuickType
 
         private Window? m_window;
 
-
         public ILanguage Language = new Hungarian(@"C:\Users\tothg\OneDrive - Szegedi Tudományegyetem\QuickType\hu.csv");
     }
 }

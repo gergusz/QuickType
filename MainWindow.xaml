@@ -10,7 +10,8 @@
     Title="QuickType">
 
     <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
-        <TextBlock x:Name="TextInputLabel" Text="" FontSize="30" />
+        <TextBlock x:Name="TextInputLabel" Text="Current Buffer: " FontSize="30" />
         <TextBlock x:Name="SuggestionsTextBlock" Text="" FontSize="24" />
+        <TextBlock x:Name="CaretPosition" Text="" FontSize="24" />
     </StackPanel>
 </Window>
