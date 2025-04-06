@@ -40,7 +40,7 @@ namespace QuickType
             KeyboardCapturer.Start();   
         }
 
-        public static new App Current { get; private set; }
+        public new static App Current { get; private set; }
 
 
         /// <summary>
@@ -49,12 +49,16 @@ namespace QuickType
         /// <param name="args">Details about the launch request and process.</param>
         protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
         {
-            m_window = new MainWindow();
-            m_window.Activate();
+            MainWindow = new MainWindow();
+            MainWindow.Activate();
         }
 
         private Window? m_window;
 
-        public ILanguage Language = new Hungarian(@"C:\Users\tothg\OneDrive - Szegedi Tudományegyetem\QuickType\hu.csv");
+        public ILanguage Language = new Hungarian();
+
+        public MainWindow? MainWindow;
+        public SuggestionsWindow? SuggestionsWindow;
+
     }
 }

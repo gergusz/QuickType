@@ -21,9 +21,5 @@ GetForegroundWindow
 GetGUIThreadInfo
 AccessibleObjectFromWindow
 IAccessible
-accLocation
-IAccessible::accLocation
-UIAutomationClient
-OBJID_CURSOR
-IID_IAccessible
 ClientToScreen
+ShowWindow

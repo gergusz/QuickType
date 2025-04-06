@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace QuickType.Model
+namespace QuickType.Model.Trie
 {
     public class TrieNode
     {

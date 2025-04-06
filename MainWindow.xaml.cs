@@ -17,7 +17,9 @@ using Windows.Foundation;
 using Windows.Foundation.Collections;
 using Windows.UI.Core;
 using Microsoft.UI.Windowing;
-using QuickType.Model;
+using Windows.Win32;
+using Windows.Win32.UI.WindowsAndMessaging;
+using QuickType.Model.Trie;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -29,12 +31,18 @@ namespace QuickType
     /// </summary>
     public sealed partial class MainWindow : Window
     {
-        public static string CurrentBuffer { get; set; }
+        public static string CurrentBuffer { get; set; } = "";
 
         public MainWindow()
         {
             this.InitializeComponent();
             KeyboardCapturer.KeyboardEvent += KeyboardCapturer_KeyboardEvent;
+            this.Closed += Current_Closed;
+        }
+
+        private void Current_Closed(object sender, WindowEventArgs args)
+        {
+            App.Current.SuggestionsWindow?.Close();
         }
 
         private void KeyboardCapturer_KeyboardEvent(string str)
@@ -54,24 +62,22 @@ namespace QuickType
 
         private void EditTextInputLabelText(string str)
         {
-            if (str == "\b")
+            switch (str)
             {
-                if (CurrentBuffer.Length <= 1)
-                {
+                case "\b" when CurrentBuffer.Length <= 1:
                     CurrentBuffer = "";
-                }
-                else
-                {
+                    break;
+                case "\b":
                     CurrentBuffer = CurrentBuffer[..^1];
-                }
-            }
-            else if (str == "\r" || str == " ")
-            {
-                CurrentBuffer = "";
-            }
-            else
-            {
-                CurrentBuffer += str;
+                    break;
+                case "\r":
+                case " ":
+                case "\n":
+                    CurrentBuffer = "";
+                    break;
+                default:
+                    CurrentBuffer += str;
+                    break;
             }
 
             TextInputLabel.Text = $"Current buffer: {CurrentBuffer}";
@@ -79,7 +85,8 @@ namespace QuickType
             if (CurrentBuffer.Length > 2 && !string.IsNullOrWhiteSpace(CurrentBuffer))
             {
                 GetSuggestions();
-            } else
+            } 
+            else
             {
                 SuggestionsTextBlock.Text = "Too few chars (<2), or just whitespace!";
             }
@@ -101,20 +108,22 @@ namespace QuickType
             wordlist[..Math.Min(wordlist.Count, 10)].ForEach(word => sb.AppendLine($"{word.word} ({word.frequency})"));
 
             SuggestionsTextBlock.Text = sb.ToString();
+
+            App.Current.SuggestionsWindow ??= new();
+            App.Current.SuggestionsWindow.UpdateSuggestions([.. wordlist[..Math.Min(wordlist.Count, 3)].Select(word => word.word)]);
+            var caretRectangle = CaretFinder.GetCaretPos();
+            
+            if (caretRectangle is not null) {
+                PInvoke.ShowWindow(new(WinRT.Interop.WindowNative.GetWindowHandle(App.Current.SuggestionsWindow)),
+                SHOW_WINDOW_CMD.SW_SHOWNOACTIVATE);
+                App.Current.SuggestionsWindow.UpdateWindowPosAndSize(caretRectangle.Value);
+            }
         }
 
         private void FindCaret()
         {
-            CaretFinder.CaretRectangle? caretRectangle = CaretFinder.GetCaretPos();
-
-            if (caretRectangle is not null)
-            {
-                CaretPosition.Text = caretRectangle.ToString();
-            }
-            else
-            {
-                CaretPosition.Text = "Caret not found!";
-            }
+            var caretRectangle = CaretFinder.GetCaretPos();
+            CaretPosition.Text = caretRectangle is not null ? caretRectangle.ToString() : "Caret not found!";
         }
     }
 }

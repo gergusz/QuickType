@@ -1,4 +1,4 @@
-﻿using QuickType.Model;
+﻿using QuickType.Model.Trie;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,8 +10,7 @@ namespace QuickType.Model.Languages
     public interface ILanguage
     {
         public string Name { get; }
-        public void LoadFromFile(string path);
-        public List<Word> SearchByPrefix(string word);
+        public List<Word> SearchByPrefix(string word, int amount = 5);
         public void Insert(string word, int frequency);
     }
 }

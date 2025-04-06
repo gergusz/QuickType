@@ -4,20 +4,20 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace QuickType.Model
+namespace QuickType.Model.Trie
 {
-    public class Trie
+    public class MemoryTrie : ITrie
     {
-        private readonly TrieNode root;
+        private readonly TrieNode _root;
 
-        public Trie()
+        public MemoryTrie()
         {
-            root = new();
+            _root = new();
         }
 
         public void Insert(string word, int frequency)
         {
-            var current = root;
+            var current = _root;
 
             foreach (var letter in word)
             {
@@ -30,7 +30,7 @@ namespace QuickType.Model
 
         public bool Search(string word)
         {
-            var current = root;
+            var current = _root;
 
             foreach (var letter in word)
             {
@@ -44,7 +44,7 @@ namespace QuickType.Model
         public List<Word> SearchByPrefix(string prefix, int amount = 5)
         {
             var result = new List<Word>();
-            var current = root;
+            var current = _root;
 
             foreach (var letter in prefix)
             {
@@ -53,7 +53,7 @@ namespace QuickType.Model
             }
 
             DFS(current, prefix, result);
-            return [.. result.OrderByDescending(x => x.frequency)];
+            return [.. result.OrderByDescending(x => x.frequency).Take(amount)];
         }
 
         private static void DFS(TrieNode node, string currentWord, List<Word> result)
@@ -67,19 +67,6 @@ namespace QuickType.Model
             {
                 DFS(child, currentWord + key, result);
             }
-        }
-    }
-
-    public record struct Word(string word, int frequency)
-    {
-        public static implicit operator (string word, int frequency)(Word value)
-        {
-            return (value.word, value.frequency);
-        }
-
-        public static implicit operator Word((string word, int frequency) value)
-        {
-            return new Word(value.word, value.frequency);
         }
     }
 }

@@ -18,13 +18,13 @@ namespace QuickType.Controller
         private const nuint WM_KEYDOWN = 0x0100;
         private const nuint WM_SYSKEYDOWN = 0x0104;
 
-        private static readonly ConcurrentQueue<(uint vkCode, uint scanCode, byte[] keyState)> keyQueue = new();
-        private static readonly AutoResetEvent keyEvent = new(false);
-        private static Thread? backgroundThread;
+        private static readonly ConcurrentQueue<(uint vkCode, uint scanCode, byte[] keyState)> _keyQueue = new();
+        private static readonly AutoResetEvent _keyEvent = new(false);
+        private static Thread? _backgroundThread;
 #pragma warning disable S1450 // Private fields only used as local variables in methods should become local variables
-        private static HOOKPROC? hookCallbackDelegate;
+        private static HOOKPROC? _hookCallbackDelegate;
 #pragma warning restore S1450 // Private fields only used as local variables in methods should become local variables
-        private static UnhookWindowsHookExSafeHandle? hookHandle;
+        private static UnhookWindowsHookExSafeHandle? _hookHandle;
 
         public delegate void KeyboardDelegate(string str);
         public static event KeyboardDelegate? KeyboardEvent;
@@ -40,8 +40,8 @@ namespace QuickType.Controller
                 byte[] keyState = new byte[256];
                 BuildKeyState(keyState);
 
-                keyQueue.Enqueue((vkCode, scanCode, keyState));
-                keyEvent.Set();
+                _keyQueue.Enqueue((vkCode, scanCode, keyState));
+                _keyEvent.Set();
             }
 
             return PInvoke.CallNextHookEx(null, nCode, wParam, lParam);
@@ -49,18 +49,18 @@ namespace QuickType.Controller
 
         public static void Start()
         {
-            backgroundThread = new Thread(ProcessKeys)
+            _backgroundThread = new Thread(ProcessKeys)
             {
                 IsBackground = true
             };
-            backgroundThread.Start();
+            _backgroundThread.Start();
 
-            hookCallbackDelegate = HookProcedure;
+            _hookCallbackDelegate = HookProcedure;
             string? mainModuleName = Process.GetCurrentProcess().MainModule?.ModuleName;
 
             if (mainModuleName is not null)
             {
-                hookHandle = PInvoke.SetWindowsHookEx(WINDOWS_HOOK_ID.WH_KEYBOARD_LL, hookCallbackDelegate, PInvoke.GetModuleHandle(mainModuleName), 0);
+                _hookHandle = PInvoke.SetWindowsHookEx(WINDOWS_HOOK_ID.WH_KEYBOARD_LL, _hookCallbackDelegate, PInvoke.GetModuleHandle(mainModuleName), 0);
             }
             else
             {
@@ -70,16 +70,16 @@ namespace QuickType.Controller
 
         public static void Stop()
         {
-            if (backgroundThread is not null)
+            if (_backgroundThread is not null)
             {
-                keyEvent.Set();
-                backgroundThread.Join();
-                backgroundThread = null;
+                _keyEvent.Set();
+                _backgroundThread.Join();
+                _backgroundThread = null;
             }
-            if (hookHandle is not null)
+            if (_hookHandle is not null)
             {
-                hookHandle.Close();
-                hookHandle = null;
+                _hookHandle.Close();
+                _hookHandle = null;
             }
         }
 
@@ -87,9 +87,9 @@ namespace QuickType.Controller
         {
             while (true)
             {
-                keyEvent.WaitOne();
+                _keyEvent.WaitOne();
 
-                while (keyQueue.TryDequeue(out var key))
+                while (_keyQueue.TryDequeue(out var key))
                 {
                     string str = TranslateKey(key.vkCode, key.scanCode, key.keyState);
                     if (!string.IsNullOrEmpty(str) && KeyboardEvent is not null)
@@ -98,7 +98,7 @@ namespace QuickType.Controller
                     }
                 }
 
-                if (backgroundThread == null)
+                if (_backgroundThread == null)
                 {
                     break;
                 }
@@ -115,6 +115,8 @@ namespace QuickType.Controller
                     return "\t";
                 case (uint)VirtualKey.Enter:
                     return "\r";
+                case (uint)VirtualKey.Escape:
+                    return "\n";
                 default:
                     {
                         using UnloadKeyboardLayoutSafeHandle hkl = PInvoke.GetKeyboardLayout_SafeHandle(0);

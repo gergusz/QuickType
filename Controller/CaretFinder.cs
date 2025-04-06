@@ -13,7 +13,7 @@ using WinRT.Interop;
 
 namespace QuickType.Controller
 {
-    internal static class CaretFinder
+    public static class CaretFinder
     {
         public static unsafe CaretRectangle? GetCaretPos()
         {
@@ -38,7 +38,7 @@ namespace QuickType.Controller
             PInvoke.AccessibleObjectFromWindow(foregroundHWND, 0xFFFFFFF8, in guid, out void* ppvObject);
 
             var accessibleObj = Marshal.GetObjectForIUnknown((nint)ppvObject) as IAccessible;
-            accessibleObj.accLocation(out int left, out int top, out int width, out int height, 0);
+            accessibleObj!.accLocation(out int left, out int top, out int width, out int height, 0);
 
             CaretRectangle caretRectangle;
 
@@ -57,7 +57,7 @@ namespace QuickType.Controller
                 caretRectangle = new(left, top, width, height);
             }
 
-            if (caretRectangle.Left == 0 && caretRectangle.Top == 0 && caretRectangle.Width == 0 && caretRectangle.Height == 0)
+            if (caretRectangle is { Left: 0, Top: 0, Width: 0, Height: 0 })
             {
                 return null;
             }
