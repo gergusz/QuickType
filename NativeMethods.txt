@@ -23,3 +23,9 @@ AccessibleObjectFromWindow
 IAccessible
 ClientToScreen
 ShowWindow
+SetWindowPos
+GetWindowRect
+MonitorFromPoint
+MONITORINFO
+GetMonitorInfo
+SendInput

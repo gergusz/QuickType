@@ -95,9 +95,10 @@ namespace QuickType
 
         }
 
-        private void GetSuggestions()
+        private void GetSuggestions(int amount = 5)
         {
-            List<Word> wordlist = App.Current.Language.SearchByPrefix(CurrentBuffer.ToLower());
+
+            List<Word> wordlist = App.Current.Language.SearchByPrefix(CurrentBuffer.ToLower(), amount);
 
             StringBuilder sb = new();
             if (wordlist.Count < 1)
@@ -105,18 +106,41 @@ namespace QuickType
                 SuggestionsTextBlock.Text = "This word is not recognised! Something went wrong?";
                 return;
             }
-            wordlist[..Math.Min(wordlist.Count, 10)].ForEach(word => sb.AppendLine($"{word.word} ({word.frequency})"));
+            wordlist[..Math.Min(wordlist.Count, amount)].ForEach(word => sb.AppendLine($"{word.word} ({word.frequency})"));
 
             SuggestionsTextBlock.Text = sb.ToString();
 
-            App.Current.SuggestionsWindow ??= new();
-            App.Current.SuggestionsWindow.UpdateSuggestions([.. wordlist[..Math.Min(wordlist.Count, 3)].Select(word => word.word)]);
-            var caretRectangle = CaretFinder.GetCaretPos();
+            var topSuggestions = wordlist[..Math.Min(wordlist.Count, amount)].Select(word => word.word).ToList();
             
-            if (caretRectangle is not null) {
-                PInvoke.ShowWindow(new(WinRT.Interop.WindowNative.GetWindowHandle(App.Current.SuggestionsWindow)),
-                SHOW_WINDOW_CMD.SW_SHOWNOACTIVATE);
-                App.Current.SuggestionsWindow.UpdateWindowPosAndSize(caretRectangle.Value);
+            var caretRectangle = CaretFinder.GetCaretPos();
+
+            if (caretRectangle is not null) 
+            {
+                try
+                {
+                    App.Current.SuggestionsWindow ??= new();
+
+                    App.Current.SuggestionsWindow.UpdateSuggestions(topSuggestions);
+
+                    App.Current.SuggestionsWindow.UpdateWindowPosAndSize(caretRectangle.Value);
+                    
+                    var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(App.Current.SuggestionsWindow);
+                    
+                    PInvoke.ShowWindow((Windows.Win32.Foundation.HWND)hwnd, SHOW_WINDOW_CMD.SW_SHOWNOACTIVATE);
+                    
+                    PInvoke.SetWindowPos(
+                        (Windows.Win32.Foundation.HWND)hwnd,
+                        new Windows.Win32.Foundation.HWND(new IntPtr(-1)),
+                        0, 0, 0, 0,
+                        SET_WINDOW_POS_FLAGS.SWP_NOMOVE | 
+                        SET_WINDOW_POS_FLAGS.SWP_NOSIZE | 
+                        SET_WINDOW_POS_FLAGS.SWP_NOACTIVATE
+                    );
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Error showing suggestions window: {ex.Message}");
+                }
             }
         }
 

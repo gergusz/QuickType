@@ -9,11 +9,11 @@
     mc:Ignorable="d"
     Title="SuggestionsWindow">
 
-    <StackPanel x:Name="SuggestionsStackPanel" Orientation="Horizontal" HorizontalAlignment="Stretch" VerticalAlignment="Top">
-        <StackPanel.ChildrenTransitions>
-            <TransitionCollection>
-                <EntranceThemeTransition IsStaggeringEnabled="True"/>
-            </TransitionCollection>
-        </StackPanel.ChildrenTransitions>
-    </StackPanel>
+    <StackPanel x:Name="SuggestionsStackPanel" Orientation="Horizontal" VerticalAlignment="Top">
+            <StackPanel.ChildrenTransitions>
+                <TransitionCollection>
+                    <EntranceThemeTransition IsStaggeringEnabled="True"/>
+                </TransitionCollection>
+            </StackPanel.ChildrenTransitions>
+        </StackPanel>
 </winex:WindowEx>
