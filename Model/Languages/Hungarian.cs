@@ -12,7 +12,7 @@ namespace QuickType.Model.Languages
 {
     internal partial class Hungarian : ILanguage
     {
-        private ITrie _Trie { get; set; }
+        private ITrie Trie { get; set; }
         public string Name => "Hungarian";
 
         [GeneratedRegex(@"([a-z]+)|([A-Z]+)|([áéóöőúüűí]+)|([ÁÉÓÖŐÚÜŰÍ]+)")]
@@ -20,18 +20,18 @@ namespace QuickType.Model.Languages
 
         public Hungarian(string? path = null)
         {
-            path ??= $@"{Path.GetFullPath(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData))}\QuickType\{Name}.db";
-            _Trie = new HybridTrie($@"Data Source={path}");
+            path ??= $@"{Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "QuickType")}\{Name}.db";
+            Trie = new HybridTrie($@"Data Source={path}");
         }
 
         public List<Word> SearchByPrefix(string word, int amount = 5)
         {
-            return _Trie.SearchByPrefix(word, amount);
+            return Trie.SearchByPrefix(word, amount);
         }
 
         public void Insert(string word, int frequency)
         {
-            _Trie.Insert(word, frequency);
+            Trie.Insert(word, frequency);
         }
 
     }

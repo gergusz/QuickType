@@ -108,7 +108,7 @@ namespace QuickType.Model.Trie
             insertCmd.Parameters.AddWithValue("$frequency", frequency);
             insertCmd.ExecuteNonQuery();
 
-            if (frequency <= _frequencyThreshhold)
+            if (frequency > _frequencyThreshhold)
             {
                 _memoryTrie.Insert(word, frequency);
             }
@@ -132,10 +132,6 @@ namespace QuickType.Model.Trie
             }
         }
 
-        public bool Search(string word)
-        {
-            throw new NotImplementedException();
-        }
 
         public List<Word> SearchByPrefix(string prefix, int amount = 5)
         {

@@ -14,9 +14,6 @@
     <WindowsPackageType>None</WindowsPackageType>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
   </PropertyGroup>
-  <ItemGroup>
-    <None Remove="hu.csv" />
-  </ItemGroup>
 
   <ItemGroup>
     <Content Include="Assets\SplashScreen.scale-200.png" />
@@ -29,6 +26,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Assets\AppIcon.ico" />
     <EmbeddedResource Include="hu.csv" />
   </ItemGroup>
 
@@ -45,15 +43,18 @@
     <ProjectCapability Include="Msix" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.3" />
-    <PackageReference Include="Microsoft.Windows.CsWin32" Version="0.3.162">
+    <PackageReference Include="CommunityToolkit.WinUI.Controls.SettingsControls" Version="8.2.250402" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.4" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="9.0.4" />
+    <PackageReference Include="Microsoft.Windows.CsWin32" Version="0.3.183">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.1742" />
-    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.250310001" />
-    <PackageReference Include="System.Memory" Version="4.6.2" />
-    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.1" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.250401001" />
+    <PackageReference Include="System.Drawing.Common" Version="9.0.4" />
+    <PackageReference Include="System.Memory" Version="4.6.3" />
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
     <PackageReference Include="WinUIEx" Version="2.5.1" />
   </ItemGroup>
 

@@ -5,19 +5,47 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Windows.System;
 using Windows.Win32;
 using Windows.Win32.UI.Input.KeyboardAndMouse;
 
-namespace QuickType.Controller
+namespace QuickType.Services
 {
-    public static class InputSimulator
+    public class InputSimulator
     {
-        public static void SimulateInputString(string input)
+        public void SimulateInputString(string input, bool wasCtrlUsed)
         {
-            foreach (char character in input)
+            if (string.IsNullOrWhiteSpace(input))
             {
-                var InputList = new List<INPUT>();
-                var SimulatedKeyDown = new INPUT()
+                return;
+            }
+
+            var inputList = new List<INPUT>();
+
+            if (wasCtrlUsed)
+            {
+                var simulatedCtrlUp = new INPUT()
+                {
+                    type = INPUT_TYPE.INPUT_KEYBOARD,
+                    Anonymous = new INPUT._Anonymous_e__Union
+                    {
+                        ki = new KEYBDINPUT
+                        {
+                            wVk = VIRTUAL_KEY.VK_CONTROL,
+                            wScan = 0,
+                            dwFlags = KEYBD_EVENT_FLAGS.KEYEVENTF_KEYUP,
+                            time = 0,
+                            dwExtraInfo = 0
+                        }
+                    }
+                };
+
+                inputList.Add(simulatedCtrlUp);
+            }
+
+            foreach (var character in input)
+            {
+                var simulatedKeyDown = new INPUT()
                 {
                     type = INPUT_TYPE.INPUT_KEYBOARD,
                     Anonymous = new INPUT._Anonymous_e__Union
@@ -32,7 +60,7 @@ namespace QuickType.Controller
                         }
                     }
                 };
-                var SimulatedKeyUp = new INPUT()
+                var simulatedKeyUp = new INPUT()
                 {
                     type = INPUT_TYPE.INPUT_KEYBOARD,
                     Anonymous = new INPUT._Anonymous_e__Union
@@ -47,11 +75,12 @@ namespace QuickType.Controller
                         }
                     }
                 };
-                InputList.Add(SimulatedKeyDown);
-                InputList.Add(SimulatedKeyUp);
-                PInvoke.SendInput(CollectionsMarshal.AsSpan(InputList), Marshal.SizeOf<INPUT>());
-                //Thread.Sleep(10);
+                inputList.Add(simulatedKeyDown);
+                inputList.Add(simulatedKeyUp);
             }
+
+            PInvoke.SendInput(CollectionsMarshal.AsSpan(inputList), Marshal.SizeOf<INPUT>());
+
         }
     }
 }
