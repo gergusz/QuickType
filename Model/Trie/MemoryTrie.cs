@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Options;
 
 namespace QuickType.Model.Trie
 {
@@ -28,35 +29,62 @@ namespace QuickType.Model.Trie
             current.Frequency = frequency;
         }
 
-        public bool Search(string word)
-        {
-            var current = _root;
-
-            foreach (var letter in word)
-            {
-                current = current.GetChild(letter);
-                if (current is null) return false;
-            }
-
-            return current.IsEndOfWord;
-        }
-
-        public List<Word> SearchByPrefix(string prefix, int amount = 5)
+        public List<Word> SearchByPrefix(string prefix, bool ignoreAccent, int amount = 5, Dictionary<char, List<char>>? accentDictionary = null)
         {
             var result = new List<Word>();
-            var current = _root;
 
-            foreach (var letter in prefix)
+            if (ignoreAccent && accentDictionary is not null)
             {
-                current = current.GetChild(letter);
-                if (current is null) return result;
+                SearchWithAccents(_root, prefix, 0, "", result, accentDictionary);
+            }
+            else
+            {
+                var current = _root;
+
+                foreach (var letter in prefix)
+                {
+                    current = current.GetChild(letter);
+                    if (current is null)
+                    {
+                        return result;
+                    }
+                }
+
+                Dfs(current, prefix, result);
             }
 
-            DFS(current, prefix, result);
             return [.. result.OrderByDescending(x => x.frequency).Take(amount)];
         }
 
-        private static void DFS(TrieNode node, string currentWord, List<Word> result)
+        private void SearchWithAccents(TrieNode? node, string prefix, int index, string currentPrefix,
+            List<Word> result, Dictionary<char, List<char>> accentDictionary)
+        {
+            if (node is null) return;
+            if (index >= prefix.Length)
+            {
+                Dfs(node, currentPrefix, result);
+                return;
+            }
+
+            var letter = prefix[index];
+
+            List<char> charsToTry = [letter];
+            if (accentDictionary.TryGetValue(letter, out var value))
+            {
+                charsToTry.AddRange(value);
+            }
+
+            foreach (var c in charsToTry)
+            {
+                var child = node.GetChild(c);
+                if (child is not null)
+                {
+                    SearchWithAccents(child, prefix, index + 1, currentPrefix + c, result, accentDictionary);
+                }
+            }
+        }
+
+        private static void Dfs(TrieNode node, string currentWord, List<Word> result)
         {
             if (node.IsEndOfWord)
             {
@@ -65,7 +93,7 @@ namespace QuickType.Model.Trie
 
             foreach (var (key, child) in node.Children)
             {
-                DFS(child, currentWord + key, result);
+                Dfs(child, currentWord + key, result);
             }
         }
     }

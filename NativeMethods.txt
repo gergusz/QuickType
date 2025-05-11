@@ -47,3 +47,4 @@ CreatePopupMenu
 PostMessage
 WM_NULL
 WM_LBUTTONUP
+SetWindowText

@@ -69,6 +69,8 @@ namespace QuickType
 
         private IHost? _host;
         private readonly CancellationTokenSource _hostCancellationTokenSource = new();
+        private bool _isServiceOnly;
+        private Process? serviceProcess;
 
         //https://learn.microsoft.com/en-us/windows/win32/winmsg/about-messages-and-message-queues
         private const uint CALLBACK_MESSAGE_ID = 0x0400;
@@ -86,6 +88,9 @@ namespace QuickType
         /// </summary>
         public App()
         {
+            var args = Environment.GetCommandLineArgs();
+            _isServiceOnly = args.Contains("--service") || args.Contains("-s");
+
             Current = this;
             Environment.SetEnvironmentVariable("MICROSOFT_WINDOWSAPPRUNTIME_BASE_DIRECTORY", AppContext.BaseDirectory);
             this.InitializeComponent();
@@ -97,53 +102,83 @@ namespace QuickType
         /// <param name="args">Details about the launch request and process.</param>
         protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
         {
-            _ = StartHostAsync();
-            _ = InitPipeClientAsync();
-            CreateTaskBarIcon();
-
-            MainWindow ??= new MainWindow();
-            SuggestionsWindow ??= new SuggestionsWindow();
-            MainWindow.Activate();
-
-        }
-
-        private HostApplicationBuilder CreateApplicationBuilder()
-        {
-            var applicationBuilder = Host.CreateApplicationBuilder();
-            
-            applicationBuilder.Services.AddWindowsService(options =>
+            if (_isServiceOnly)
             {
-                options.ServiceName = "QuickType";
-            });
-
-            LoggerProviderOptions.RegisterProviderOptions<EventLogSettings, EventLogLoggerProvider>(applicationBuilder.Services);
-
-            applicationBuilder.Services.AddLogging(configure =>
+                _ = StartHostAsync();
+            }
+            else
             {
-                configure.AddEventLog();
-                configure.AddConsole();
-            });
+                _ = InitPipeClientAsync();
 
-            applicationBuilder.Services.AddSingleton<KeyboardCapturer>();
-            applicationBuilder.Services.AddSingleton<CaretFinder>();
-            applicationBuilder.Services.AddSingleton<InputSimulator>();
-            applicationBuilder.Services.AddSingleton<SuggestionService>();
-            applicationBuilder.Services.AddSingleton<LanguageService>();
-            applicationBuilder.Services.AddSingleton<SettingsService>();
-            applicationBuilder.Services.AddHostedService<MainService>();
+                if (Debugger.IsAttached || (_pipeClient is null || !_pipeClient.IsConnected) && !TryLaunchServiceProcess())
+                {
+                    _ = StartHostAsync();
+                }
 
-            return applicationBuilder;
+                CreateTaskBarIcon();
+
+                MainWindow ??= new MainWindow();
+                SuggestionsWindow ??= new SuggestionsWindow();
+                MainWindow.Activate();
+            }
         }
 
         private async Task StartHostAsync()
         {
-            _host = CreateApplicationBuilder().Build();
+            _host = Host.CreateDefaultBuilder().ConfigureServices((_, services) =>
+            {
+                services.AddSingleton<KeyboardCapturer>();
+                services.AddSingleton<CaretFinder>();
+                services.AddSingleton<InputSimulator>();
+                services.AddSingleton<SuggestionService>();
+                services.AddSingleton<LanguageService>();
+                services.AddSingleton<SettingsService>();
+                services.AddHostedService<MainService>();
+            }).ConfigureLogging((_, logging) =>
+            {
+                logging.AddConsole();
+            }).Build();
             await _host.StartAsync(_hostCancellationTokenSource.Token);
+        }
+
+        private bool TryLaunchServiceProcess()
+        {
+            try
+            {
+                var currentExecutablePath = Process.GetCurrentProcess().MainModule!.FileName;
+                if (string.IsNullOrEmpty(currentExecutablePath))
+                {
+                    Debug.WriteLine("Failed to get current executable path.");
+                    return false;
+                }
+
+                var processStartInfo = new ProcessStartInfo
+                {
+                    FileName = currentExecutablePath,
+                    Arguments = "--service",
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+                serviceProcess = Process.Start(processStartInfo);
+                Thread.Sleep(100);
+                if (serviceProcess is null || serviceProcess.HasExited)
+                {
+                    Debug.WriteLine("Failed to start service process.");
+                    return false;
+                }
+                Debug.WriteLine($"Service process started with ID: {serviceProcess.Id}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error launching service process: {ex.Message}");
+                return false;
+            }
         }
 
         private async Task InitPipeClientAsync()
         {
-            const int maxRetries = 20;
+            const int maxRetries = 5;
             const int initialRetryDelayMs = 1000;
             var retryCount = 0;
             var connected = false;
@@ -314,7 +349,6 @@ namespace QuickType
             }
         }
 
-
         private void CreateTaskBarIcon()
         {
             InitializeWindowHandle();
@@ -408,7 +442,7 @@ namespace QuickType
             SafeHandle safeHMenu = new DestroyMenuSafeHandle(hMenu, false);
 
             PInvoke.AppendMenu(safeHMenu, MENU_ITEM_FLAGS.MF_STRING, ID_OPEN_SETTINGS, "Settings");
-            PInvoke.AppendMenu(safeHMenu, MENU_ITEM_FLAGS.MF_SEPARATOR, (0), null);
+            PInvoke.AppendMenu(safeHMenu, MENU_ITEM_FLAGS.MF_SEPARATOR, 0, null);
             PInvoke.AppendMenu(safeHMenu, MENU_ITEM_FLAGS.MF_STRING, ID_EXIT, "Exit");
 
             PInvoke.GetCursorPos(out var pt);
@@ -433,6 +467,12 @@ namespace QuickType
                     Current.Exit();
                     break;
             }
+        }
+
+        private new void Exit()
+        {
+            serviceProcess?.Kill();
+            base.Exit();
         }
     }
 

@@ -6,39 +6,11 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using QuickType.Model.Languages;
 
 namespace QuickType.Model;
-public partial class AppSettings : INotifyPropertyChanged
+public sealed partial class AppSettings : INotifyPropertyChanged
 {
-    //public string? Language
-    //{
-    //    get; set;
-    //}
-    //public string? DictionaryPath
-    //{
-    //    get; set;
-    //}
-    //public string? UserDictionaryPath
-    //{
-    //    get; set;
-    //}
-    //public string? UserDictionaryFileName
-    //{
-    //    get; set;
-    //}
-    //public string? UserDictionaryFilePath
-    //{
-    //    get; set;
-    //}
-    //public string? UserDictionaryFileFullPath
-    //{
-    //    get; set;
-    //}
-    //public bool IsUserDictionaryEnabled { get; set; } = true;
-    //public bool IsAutoCorrectEnabled { get; set; } = true;
-    //public bool IsAutoCompleteEnabled { get; set; } = true;
-    //public bool IsAutoPunctuationEnabled { get; set; } = true;
-
     [JsonIgnore] private bool _startWithWindows = false;
 
     public bool StartWithWindows
@@ -52,23 +24,6 @@ public partial class AppSettings : INotifyPropertyChanged
             }
 
             _startWithWindows = value;
-            OnPropertyChanged();
-        }
-    }
-
-    [JsonIgnore] private List<string> _activeLanguages = [];
-
-    public List<string> ActiveLanguages
-    {
-        get => _activeLanguages;
-        set
-        {
-            if (value == _activeLanguages)
-            {
-                return;
-            }
-
-            _activeLanguages = value;
             OnPropertyChanged();
         }
     }
@@ -113,10 +68,63 @@ public partial class AppSettings : INotifyPropertyChanged
         }
     }
 
+    [JsonIgnore] private bool _ignoreAccent = false;
+
+    public bool IgnoreAccent
+    {
+        get => _ignoreAccent;
+        set
+        {
+            if (value == _ignoreAccent)
+            {
+                return;
+            }
+            _ignoreAccent = value;
+            OnPropertyChanged();
+        }
+    }
+
+    [JsonIgnore] private List<CustomLanguageDefinition> _customLanguageDefinitions;
+
+    public List<CustomLanguageDefinition> CustomLanguages
+    {
+        get => _customLanguageDefinitions;
+        set
+        {
+            if (value == _customLanguageDefinitions)
+            {
+                return;
+            }
+            _customLanguageDefinitions = value;
+            OnPropertyChanged();
+        }
+    }
+
+    [JsonIgnore] private List<string> _loadedInternalLanguages;
+
+    public List<string> LoadedInternalLanguages
+    {
+        get => _loadedInternalLanguages;
+        set
+        {
+            if (value == _loadedInternalLanguages)
+            {
+                return;
+            }
+
+            if (!value.TrueForAll(x => x.Equals(nameof(Hungarian)) || x.Equals(nameof(English))))
+            {
+                value = [];
+            }
+            _loadedInternalLanguages = value;
+            OnPropertyChanged();
+        }
+    }
+
     //https://learn.microsoft.com/en-us/dotnet/desktop/wpf/data/how-to-implement-property-change-notification
     public event PropertyChangedEventHandler PropertyChanged;
 
-    protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+    private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }

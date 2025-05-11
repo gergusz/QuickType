@@ -5,34 +5,26 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Text.RegularExpressions;
-using QuickType.Model.Trie;
 using System.Reflection;
+using QuickType.Model.Trie;
 
 namespace QuickType.Model.Languages
 {
-    internal partial class Hungarian : ILanguage
+    internal class Hungarian : BaseLanguage
     {
-        private ITrie Trie { get; set; }
-        public string Name => "Hungarian";
-
-        [GeneratedRegex(@"([a-z]+)|([A-Z]+)|([áéóöőúüűí]+)|([ÁÉÓÖŐÚÜŰÍ]+)")]
-        private static partial Regex ValidCharsRegex();
-
-        public Hungarian(string? path = null)
+        internal Hungarian()
         {
-            path ??= $@"{Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "QuickType")}\{Name}.db";
-            Trie = new HybridTrie($@"Data Source={path}");
+            Priority = 10;
+            Name = nameof(Hungarian);
+            HasAccents = true;
+            AccentDict = new Dictionary<char, List<char>>()
+            {
+                {'a', ['á'] },
+                {'e', ['é'] },
+                {'i', ['í'] },
+                {'o', ['ó', 'ö', 'ő'] },
+                {'u', ['ú', 'ü', 'ű'] }
+            };
         }
-
-        public List<Word> SearchByPrefix(string word, int amount = 5)
-        {
-            return Trie.SearchByPrefix(word, amount);
-        }
-
-        public void Insert(string word, int frequency)
-        {
-            Trie.Insert(word, frequency);
-        }
-
     }
 }

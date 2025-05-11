@@ -4,30 +4,58 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
+using System.Text;
+using System.Xml.Linq;
+using QuickType.Model.Languages;
 
 namespace QuickType.Model.Trie
 {
     public class HybridTrie : ITrie
     {
-        private readonly MemoryTrie _memoryTrie;
+        private MemoryTrie _memoryTrie;
+        private int _frequencyThreshhold;
         private readonly string _connectionString;
-        private readonly int _frequencyThreshhold;
+        private readonly string? _embeddedResourceName;
+        private readonly string? _filePath;
+        private readonly string? _readString;
 
-        public HybridTrie(string connectionString, int frequencyThreshold = 10, bool forceRecreate = false)
+        internal HybridTrie(string name, int frequencyThreshold = 10, bool forceRecreate = false)
         {
             _memoryTrie = new MemoryTrie();
-            _connectionString = connectionString;
+            _connectionString =
+                $@"Data Source={Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "QuickType")}\Languages\{name}.db";
             _frequencyThreshhold = frequencyThreshold;
-            if (forceRecreate || !Path.Exists($"{connectionString.Split("=")[1]}"))
+
+            if (name == nameof(Hungarian))
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(connectionString.Split("=")[1])!);
+                _embeddedResourceName = "QuickType.hu_full.txt";
+            } 
+            else if (name == nameof(English))
+            {
+                _embeddedResourceName = "QuickType.en_full.txt";
+            }
+            else
+            {
+                _embeddedResourceName = null;
+            }
+
+            if (forceRecreate || !Path.Exists($"{_connectionString.Split("=")[1]}"))
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(_connectionString.Split("=")[1])!);
                 RecreateDatabase();
             }
 
             FillMemoryTrie();
         }
 
-        private void RecreateDatabase()
+        public HybridTrie(string name, string filePath, string readString, int frequencyThreshhold = 10, bool forceRecreate = false) 
+            : this (name, frequencyThreshhold, forceRecreate)
+        {
+            _filePath = filePath;
+            _readString = readString;
+        }
+
+        public void RecreateDatabase()
         {
             using var conn = new SqliteConnection(_connectionString);
             conn.Open();
@@ -45,20 +73,6 @@ namespace QuickType.Model.Trie
                 ";
             createCmd.ExecuteNonQuery();
 
-            var assembly = Assembly.GetExecutingAssembly();
-            using var stream = assembly.GetManifestResourceStream("QuickType.hu.csv") ?? throw new InvalidOperationException("Resource 'QuickType.hu.csv' not found.");
-            using var reader = new StreamReader(stream);
-            var lines = new List<string>();
-            while (!reader.EndOfStream)
-            {
-                var line = reader.ReadLine();
-                if (line != null)
-                {
-                    lines.Add(line);
-                    
-                }
-            }
-
             using var transaction = conn.BeginTransaction();
             var insertCmd = conn.CreateCommand();
             insertCmd.CommandText = @"INSERT INTO Words (Word, Frequency) VALUES ($word, $frequency)";
@@ -71,25 +85,100 @@ namespace QuickType.Model.Trie
             freqParam.ParameterName = "$frequency";
             insertCmd.Parameters.Add(freqParam);
 
-            for (int i = 1; i < lines.Count; i++)
+            if (_embeddedResourceName is not null)
             {
-                var line = lines[i];
-
-                var parts = line.Split(',');
-                var word = parts[0];
-                var freq = int.Parse(parts[1]);
-
-                wordParam.Value = word;
-                freqParam.Value = freq;
-                try
+                var assembly = Assembly.GetExecutingAssembly();
+                using var stream = assembly.GetManifestResourceStream(_embeddedResourceName) ?? throw new InvalidOperationException($"Embedded resource {_embeddedResourceName} not found.");
+                using var reader = new StreamReader(stream);
+                while (!reader.EndOfStream)
                 {
-                    insertCmd.ExecuteNonQuery();
+                    var line = reader.ReadLine();
+                    if (line != null)
+                    {
+                        var parts = line.Split(' ');
+                        var word = parts[0];
+                        var freq = int.Parse(parts[1]);
+
+                        wordParam.Value = word;
+                        freqParam.Value = freq;
+                        try
+                        {
+                            insertCmd.ExecuteNonQuery();
+                        }
+                        catch (SqliteException ex) when (ex.SqliteErrorCode == 19) //SQLite Error 19: UNIQUE constraint failed
+                        {
+                            Debug.WriteLine($"Duplicate entry for word '{word}' with frequency {freq}. Skipping this entry.");
+                        }
+                    }
                 }
-                catch (SqliteException ex) when (ex.SqliteErrorCode == 19) //SQLite Error 19: UNIQUE constraint failed
+            }
+            else
+            {
+                if (_filePath is null || _readString is null)
                 {
-                    Debug.WriteLine($"Duplicate entry for word '{word}' with frequency {freq}. Skipping this entry.");
-                    continue;
+                    throw new InvalidOperationException("File path or read string is not given, but not an embedded language!");
                 }
+
+                var readParts = _readString.Split(["{0}", "{1}"], StringSplitOptions.None);
+
+                if (readParts.Length < 3)
+                {
+                    throw new InvalidOperationException($"Invalid read string format: '{_readString}'. Expected format with {{0}} for word and {{1}} for frequency.");
+                }
+
+                var prefix = readParts[0];
+                var middle = readParts[1];
+                var suffix = readParts[2];
+
+                using var reader = new StreamReader(_filePath);
+                while (!reader.EndOfStream)
+                {
+                    var line = reader.ReadLine();
+                    if (line == null)
+                    {
+                        continue;
+                    }
+
+                    try
+                    {
+                        if (!line.StartsWith(prefix) || !line.EndsWith(suffix))
+                        {
+                            Debug.WriteLine($"Line '{line}' does not match pattern '{_readString}'");
+                            continue;
+                        }
+
+                        var withoutPrefix = line[prefix.Length..];
+                        var withoutSuffix = withoutPrefix[..^suffix.Length];
+                        var parts = withoutSuffix.Split(middle);
+
+                        if (parts.Length != 2)
+                        {
+                            Debug.WriteLine($"Could not extract word and frequency from line '{line}' using pattern '{_readString}'");
+                            continue;
+                        }
+
+                        var word = parts[0].Trim();
+                        var freq = int.Parse(parts[1].Trim());
+
+                        wordParam.Value = word;
+                        freqParam.Value = freq;
+
+                        try
+                        {
+                            insertCmd.ExecuteNonQuery();
+                        }
+                        catch (SqliteException ex) when (ex.SqliteErrorCode == 19) //SQLite Error 19: UNIQUE constraint failed
+                        {
+                            Debug.WriteLine($"Duplicate entry for word '{word}' with frequency {freq}. Skipping this entry.");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"Error processing line '{line}': {ex.Message}");
+                        throw;
+                    }
+                }
+
             }
 
             transaction.Commit();
@@ -133,15 +222,62 @@ namespace QuickType.Model.Trie
         }
 
 
-        public List<Word> SearchByPrefix(string prefix, int amount = 5)
+        public List<Word> SearchByPrefix(string prefix, bool ignoreAccent, int amount = 5, Dictionary<char, List<char>>? accentDictionary = null)
         {
-            var result = _memoryTrie.SearchByPrefix(prefix, amount);
+            var result = _memoryTrie.SearchByPrefix(prefix, ignoreAccent, amount, accentDictionary);
 
-            if (result.Count < amount)
+            if (result.Count >= amount)
             {
-                using var conn = new SqliteConnection(_connectionString);
-                conn.Open();
-                var selectCmd = conn.CreateCommand();
+                return result;
+            }
+
+            using var conn = new SqliteConnection(_connectionString);
+            conn.Open();
+            var selectCmd = conn.CreateCommand();
+
+            if (ignoreAccent && accentDictionary is not null)
+            {
+                var commandText = new StringBuilder(@"
+                        SELECT Word, Frequency
+                        FROM Words
+                        WHERE Word LIKE $prefix || '%'");
+
+                var index = 0;
+                var accentedList = new List<(string paramName, string value)>();
+
+                for (var i = 0; i < prefix.Length; i++)
+                {
+                    var c = prefix[i];
+                    if (!accentDictionary.TryGetValue(c, out var charList))
+                    {
+                        continue;
+                    }
+
+                    foreach (var accentedChar in charList)
+                    {
+                        index++;
+                        var paramName = $"$accentedPrefix{index}";
+                        var accentedPrefix = $"{prefix.AsSpan(0, i)}{accentedChar}{prefix.AsSpan(i + 1)}";
+                        accentedList.Add((paramName, accentedPrefix));
+                        commandText.Append($" OR Word LIKE {paramName} || '%'");
+                    }
+                }
+
+                commandText.Append(@"
+                        ORDER BY Frequency DESC
+                        LIMIT $amount");
+
+                selectCmd.CommandText = commandText.ToString();
+                selectCmd.Parameters.AddWithValue("$prefix", prefix);
+                selectCmd.Parameters.AddWithValue("$amount", amount - result.Count);
+
+                foreach (var (paramName, value) in accentedList)
+                {
+                    selectCmd.Parameters.AddWithValue(paramName, value);
+                }
+            }
+            else
+            {
                 selectCmd.CommandText = @"
                     SELECT Word, Frequency
                     FROM Words
@@ -151,14 +287,27 @@ namespace QuickType.Model.Trie
                     ";
                 selectCmd.Parameters.AddWithValue("$prefix", prefix);
                 selectCmd.Parameters.AddWithValue("$amount", amount - result.Count);
-                using var reader = selectCmd.ExecuteReader();
-                while (reader.Read())
-                {
-                    result.Add(new Word(reader.GetString(0), reader.GetInt32(1)));
-                }
+            }
+
+            using var reader = selectCmd.ExecuteReader();
+            while (reader.Read())
+            {
+                result.Add(new Word(reader.GetString(0), reader.GetInt32(1)));
             }
 
             return result;
+        }
+
+        public void ChangeFrequency(int newFrequency)
+        {
+            if (newFrequency == _frequencyThreshhold)
+            {
+                return;
+            }
+
+            _frequencyThreshhold = newFrequency;
+            _memoryTrie = new MemoryTrie();
+            FillMemoryTrie();
         }
     }
 }

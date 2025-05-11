@@ -47,14 +47,53 @@
                         </controls:SettingsExpander.Items>
                     </controls:SettingsExpander>
                     <TextBlock Style="{StaticResource SettingsSectionHeaderTextBlockStyle}" Text="Nyelv"/>
-                    <controls:SettingsExpander Header="Jelenlegi nyelvek" HeaderIcon="{winUi:FontIcon Glyph=&#xF2B7;}">
+                    <controls:SettingsExpander Header="Betöltött nyelvek">
                     </controls:SettingsExpander>
-                    <controls:SettingsCard Header="Maximum ajánlott szó">
-                        <NumberBox Minimum="1" Maximum="10" Value="{x:Bind Settings.MaxSuggestions, Mode=TwoWay}"/>
+                    <controls:SettingsExpander Header="Beépített nyelvek" HeaderIcon="{winUi:FontIcon Glyph=&#xF2B7;}" IsEnabled="False">
+                        <controls:SettingsExpander.Items>
+                            <controls:SettingsCard Header="Magyar nyelv">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button x:Name="LoadHungarianButton" 
+                                            Content="Betöltés" 
+                                            Click="LoadHungarianButton_Click"
+                                            Visibility="{x:Bind IsHungarianNotLoaded, Mode=OneWay}"/>
+                                    <Button x:Name="UnloadHungarianButton" 
+                                            Content="Eltávolítás" 
+                                            Click="UnloadHungarianButton_Click"
+                                            Visibility="{x:Bind IsHungarianLoaded, Mode=OneWay}"/>
+                                </StackPanel>
+                            </controls:SettingsCard>
+                            <controls:SettingsCard Header="Angol nyelv">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button x:Name="LoadEnglishButton" 
+                                            Content="Betöltés" 
+                                            Click="LoadEnglishButton_Click"
+                                            Visibility="{x:Bind IsEnglishNotLoaded, Mode=OneWay}"/>
+                                    <Button x:Name="UnloadEnglishButton" 
+                                            Content="Eltávolítás" 
+                                            Click="UnloadEnglishButton_Click"
+                                            Visibility="{x:Bind IsEnglishLoaded, Mode=OneWay}"/>
+                                </StackPanel>
+                            </controls:SettingsCard>
+                        </controls:SettingsExpander.Items>
+                    </controls:SettingsExpander>
+                    <controls:SettingsCard Header="Saját nyelv hozzáadása">
+                        <Button Content="Hozzáadás" Click="AddCustomLanguage_OnClick"></Button>
                     </controls:SettingsCard>
-                    <controls:SettingsCard Header="Indexelés kezdése egynél" Description="Ajánlatoknál az első elem a billentyűzeten az `1`-es számbillentyűnek feleljen meg, vagy a `0`-ásnak">
-                        <ToggleSwitch IsOn="{x:Bind Settings.StartAtOne, Mode=TwoWay}"></ToggleSwitch>
-                    </controls:SettingsCard>
+                    <TextBlock Style="{StaticResource SettingsSectionHeaderTextBlockStyle}" Text="Ajánlatok"/>
+                    <controls:SettingsExpander Header="Ajánlatok" HeaderIcon="{winUi:FontIcon Glyph=&#xE82F;}">
+                        <controls:SettingsExpander.Items>
+                            <controls:SettingsCard Header="Maximum ajánlott szó darabszáma" Description="Előfordulhat kevesebb ajánlat is">
+                                <Slider StepFrequency="1" Minimum="1" Maximum="10" Value="{x:Bind Settings.MaxSuggestions, Mode=TwoWay}"></Slider>
+                            </controls:SettingsCard>
+                            <controls:SettingsCard Header="Indexelés kezdése egynél" Description="Ajánlatoknál az első elem a billentyűzeten az `1`-es számbillentyűnek feleljen meg, vagy a `0`-ásnak">
+                                <ToggleSwitch IsOn="{x:Bind Settings.StartAtOne, Mode=TwoWay}"></ToggleSwitch>
+                            </controls:SettingsCard>
+                            <controls:SettingsCard Header="Ékezetek javítása" Description="Mutasson-e ajánlatokat ékezettől függetlenül (Ékezeteket nem tartalmazó nyelveknél nem csinál semmit sem)">
+                                <ToggleSwitch IsOn="{x:Bind Settings.IgnoreAccent, Mode=TwoWay}"></ToggleSwitch>
+                            </controls:SettingsCard>
+                        </controls:SettingsExpander.Items>
+                    </controls:SettingsExpander>
                 </StackPanel>
                 <Grid x:Name="LoadingOverlay" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}" Opacity="0.7">
                     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">

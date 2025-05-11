@@ -13,6 +13,7 @@ using System.Text;
 using System.Text.Json;
 using QuickType.Model;
 using QuickType.Model.IPC;
+using QuickType.Model.Languages;
 
 namespace QuickType.Services;
 
@@ -45,6 +46,8 @@ public sealed partial class MainService(
             _pipeStreamReader = new StreamReader(_pipeServer);
             _pipeListenerCancellationTokenSource = new CancellationTokenSource();
             _pipeListenerTask = PipeListenerTaskAsync(_pipeListenerCancellationTokenSource.Token);
+
+            await LoadLanguagesFromSettingsAsync();
 
             keyboardCapturer.KeyboardEvent += KeyboardCapturer_KeyboardEvent;
             keyboardCapturer.Start();
@@ -89,8 +92,8 @@ public sealed partial class MainService(
             if (currentBuffer.Length > 1 && !string.IsNullOrWhiteSpace(str))
             {
                 var caretRectangle = caretFinder.GetCaretPos();
-                var suggestions = suggestionService.GetSuggestions(languageService, currentBuffer,
-                    settingsService.AppSettings.MaxSuggestions);
+                var suggestions = suggestionService.GetSuggestions(languageService.LoadedLanguages, currentBuffer, 
+                    settingsService.AppSettings.IgnoreAccent, settingsService.AppSettings.MaxSuggestions);
                 if (suggestions.Count > 0)
                 {
                     _ = SendSuggestionsAsync(suggestions, caretRectangle);
@@ -198,7 +201,23 @@ public sealed partial class MainService(
                             var settingsMessage = JsonSerializer.Deserialize<SettingsMessage>(line);
                             if (settingsMessage != null)
                             {
-                                settingsService.HandleSettingsMessageAsync(settingsMessage.Settings);
+                                var oldInternalLanguages = settingsService.AppSettings.LoadedInternalLanguages ?? new List<string>();
+                                var newInternalLanguages = settingsMessage.Settings.LoadedInternalLanguages ?? new List<string>();
+                                var oldCustomLanguages = settingsService.AppSettings.CustomLanguages ?? new List<CustomLanguageDefinition>();
+                                var newCustomLanguages = settingsMessage.Settings.CustomLanguages ?? new List<CustomLanguageDefinition>();
+
+
+                                var languagesChanged = !oldInternalLanguages.SequenceEqual(newInternalLanguages) ||
+                                                        !oldCustomLanguages.Select(l => l.Name).SequenceEqual(newCustomLanguages.Select(l => l.Name));
+
+                                if (languagesChanged)
+                                {
+                                    logger.LogInformation("Language configuration changed, updating language service");
+                                    await languageService.UnloadLanguagesAsyncTask(oldInternalLanguages, oldCustomLanguages);
+                                    await languageService.LoadLanguagesAsyncTask(newInternalLanguages, newCustomLanguages);
+                                }
+
+                                await settingsService.HandleSettingsMessageAsync(settingsMessage.Settings);
                             }
                             break;
                         default:
@@ -253,6 +272,25 @@ public sealed partial class MainService(
         else
         {
             logger.LogWarning("Invalid suggestion index: {Number}", number);
+        }
+    }
+    private async Task LoadLanguagesFromSettingsAsync()
+    {
+        try
+        {
+            logger.LogInformation("Loading languages from settings...");
+
+            var internalLanguages = settingsService.AppSettings.LoadedInternalLanguages ?? new List<string>();
+            var customLanguages = settingsService.AppSettings.CustomLanguages ?? new List<CustomLanguageDefinition>();
+
+            await languageService.LoadLanguagesAsyncTask(internalLanguages, customLanguages);
+
+            logger.LogInformation("Languages loaded successfully: {Count} languages",
+                languageService.LoadedLanguages.Count);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error loading languages from settings: {Message}", ex.Message);
         }
     }
 
