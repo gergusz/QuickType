@@ -79,11 +79,16 @@ namespace QuickType.Model.Languages
             }
         }
 
-        internal void LoadHybridTrie(int frequencyThreshhold = 10, bool forceRecreate = false)
+        public void LoadHybridTrie(int frequencyThreshhold = 10, bool forceRecreate = false)
         {
             Trie = new HybridTrie(Name, frequencyThreshhold, forceRecreate);
         }
 
+        public void DisposeTrie()
+        {
+            Trie?.Dispose();
+            Trie = null;
+        }
         
     }
 }

@@ -35,7 +35,6 @@ namespace QuickType.WinUI
         {
             this.InitializeComponent();
 
-            PriorityNumberBox.Value = 100;
             HasAccentsToggle.IsOn = false;
             UsesHybridTrieToggle.IsOn = true;
             FrequencyThresholdNumberBox.Value = 10;
@@ -43,16 +42,20 @@ namespace QuickType.WinUI
             HasAccentsToggle.Toggled += (s, e) =>
             {
                 AccentDictionaryPanel.Visibility = HasAccentsToggle.IsOn ? Visibility.Visible : Visibility.Collapsed;
+                AccentDictionaryTextBlock.Visibility = HasAccentsToggle.IsOn ? Visibility.Visible : Visibility.Collapsed;
             };
 
             AccentDictionaryPanel.Visibility = Visibility.Collapsed;
+            AccentDictionaryTextBlock.Visibility = Visibility.Collapsed;
 
             UsesHybridTrieToggle.Toggled += (s, e) =>
             {
                 FrequencyThresholdNumberBox.Visibility = UsesHybridTrieToggle.IsOn ? Visibility.Visible : Visibility.Collapsed;
+                FrequencyThresholdTextBlock.Visibility = UsesHybridTrieToggle.IsOn ? Visibility.Visible : Visibility.Collapsed;
             };
 
-            FrequencyThresholdNumberBox.Visibility = Visibility.Collapsed;
+            FrequencyThresholdNumberBox.Visibility = Visibility.Visible;
+            FrequencyThresholdTextBlock.Visibility = Visibility.Visible;
         }
 
         private async void BrowseButton_Click(object sender, RoutedEventArgs e)
@@ -63,9 +66,10 @@ namespace QuickType.WinUI
 
             filePicker.ViewMode = PickerViewMode.List;
             filePicker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
-            filePicker.FileTypeFilter.Add("*.*");
             filePicker.FileTypeFilter.Add(".txt");
             filePicker.FileTypeFilter.Add(".csv");
+            filePicker.FileTypeFilter.Add("*");
+            
 
             StorageFile file = await filePicker.PickSingleFileAsync();
             if (file != null)
@@ -87,21 +91,21 @@ namespace QuickType.WinUI
                 try
                 {
                     Dictionary<char, List<char>>? accentDict = null;
-                    if (HasAccentsToggle.IsOn && !string.IsNullOrWhiteSpace(AccentDictTextBox.Text))
+                    if (HasAccentsToggle.IsOn && !string.IsNullOrWhiteSpace(AccentDictionaryTextBox.Text))
                     {
-                        accentDict = ParseAccentDictionary(AccentDictTextBox.Text);
+                        accentDict = ParseAccentDictionary(AccentDictionaryTextBox.Text);
                     }
 
                     CreatedLanguage = new CustomLanguageDefinition(
-                        Name: NameTextBox.Text.Trim(),
-                        Priority: (int)PriorityNumberBox.Value,
-                        HasAccents: HasAccentsToggle.IsOn,
-                        AccentDict: accentDict,
-                        UsesHybridTrie: UsesHybridTrieToggle.IsOn,
-                        FrequencyThreshhold: UsesHybridTrieToggle.IsOn ? (int)FrequencyThresholdNumberBox.Value : null,
-                        FilePath: selectedFilePath,
-                        ReadString: ReadStringTextBox.Text.Trim(),
-                        IsLoaded: false);
+                        NameTextBox.Text.Trim(),
+                        0,
+                        HasAccentsToggle.IsOn,
+                        accentDict,
+                        UsesHybridTrieToggle.IsOn,
+                        UsesHybridTrieToggle.IsOn ? (int)FrequencyThresholdNumberBox.Value : null,
+                        selectedFilePath,
+                        ReadStringTextBox.Text.Trim(),
+                        false);
 
                     this.Close();
                 }
@@ -147,12 +151,6 @@ namespace QuickType.WinUI
             if (name.Equals("Hungarian", StringComparison.OrdinalIgnoreCase) || name.Equals("English", StringComparison.OrdinalIgnoreCase))
             {
                 ShowError("A nyelv neve nem lehet 'Hungarian' vagy 'English'.");
-                return false;
-            }
-
-            if (PriorityNumberBox.Value == null)
-            {
-                ShowError("A prioritást meg kell adni.");
                 return false;
             }
 

@@ -32,25 +32,17 @@
                 <TextBlock Text="Nyelv neve" Style="{StaticResource BodyStrongTextBlockStyle}"/>
                 <TextBox x:Name="NameTextBox" PlaceholderText="Adja meg a nyelv nevét"/>
 
-                <!-- Priority -->
-                <TextBlock Text="Prioritás" Style="{StaticResource BodyStrongTextBlockStyle}"/>
-                <NumberBox x:Name="PriorityNumberBox" 
-                          PlaceholderText="Adjon meg egy egész számot" 
-                          SpinButtonPlacementMode="Compact"
-                          Minimum="0" 
-                          SmallChange="1"/>
-
                 <!-- Has Accents -->
                 <TextBlock Text="Ékezetek" Style="{StaticResource BodyStrongTextBlockStyle}"/>
                 <ToggleSwitch x:Name="HasAccentsToggle" Header="Tartalmaz ékezeteket" OnContent="Igen" OffContent="Nem"/>
 
                 <!-- Accent Dictionary -->
-                <TextBlock Text="Ékezetek szótára" Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                <TextBlock x:Name="AccentDictionaryTextBlock" Text="Ékezetek szótára" Style="{StaticResource BodyStrongTextBlockStyle}"/>
                 <StackPanel x:Name="AccentDictionaryPanel" Spacing="8">
                     <TextBlock Text="Az ékezetek szótára a következő formában: betű:ékezetes_betűk (például: a:áà)" 
                               TextWrapping="Wrap" 
                               Style="{StaticResource CaptionTextBlockStyle}"/>
-                    <TextBox x:Name="AccentDictTextBox" 
+                    <TextBox x:Name="AccentDictionaryTextBox" 
                             PlaceholderText="a:áà,e:éè,i:íì"
                             AcceptsReturn="True" 
                             TextWrapping="Wrap"
@@ -58,11 +50,11 @@
                 </StackPanel>
 
                 <!-- Uses Hybrid Trie -->
-                <TextBlock Text="Trie típus" Style="{StaticResource BodyStrongTextBlockStyle}"/>
                 <ToggleSwitch x:Name="UsesHybridTrieToggle" Header="HybridTrie használata" OnContent="HybridTrie" OffContent="MemoryTrie"/>
+                <TextBlock Text="MemoryTrie csak memóriában tárolja el a szavakat, a HybridTrie a megadott gyakorisági küszöb alatt egy helyi adatbázisban tárolja el a ritkább szavakat, míg a gyakoriabbakat memóriába tárolja. Nagyobb méretű szótáraknál érdemes alkalmazni a HybridTrie-t." TextWrapping="Wrap" Style="{StaticResource CaptionTextBlockStyle}"></TextBlock>
 
                 <!-- Frequency Threshold -->
-                <TextBlock Text="Gyakorisági küszöb" Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                <TextBlock x:Name="FrequencyThresholdTextBlock" Text="Gyakorisági küszöb" Style="{StaticResource BodyStrongTextBlockStyle}"/>
                 <NumberBox x:Name="FrequencyThresholdNumberBox" 
                           PlaceholderText="Adjon meg egy egész számot" 
                           SpinButtonPlacementMode="Compact"

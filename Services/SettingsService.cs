@@ -2,13 +2,17 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using QuickType.Model;
 using System.Text.Json;
 using System.Threading;
 using Microsoft.Extensions.Logging;
+using Microsoft.UI.Xaml;
+using Microsoft.Win32;
 using QuickType.Model.IPC;
+using System.Diagnostics;
 
 namespace QuickType.Services
 {
@@ -34,13 +38,15 @@ namespace QuickType.Services
 
             if (e.PropertyName == nameof(AppSettings.StartWithWindows))
             {
+                RegistryKey regKey = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", true);
+
                 if (AppSettings.StartWithWindows)
                 {
-                    //TODO: add to startup
+                    regKey!.SetValue(Assembly.GetExecutingAssembly().FullName, Environment.ProcessPath);
                 }
                 else
                 {
-                    //TODO: remove from startup
+                    regKey!.DeleteValue(Assembly.GetExecutingAssembly().FullName);
                 }
             }
         }

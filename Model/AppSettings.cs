@@ -84,7 +84,7 @@ public sealed partial class AppSettings : INotifyPropertyChanged
         }
     }
 
-    [JsonIgnore] private List<CustomLanguageDefinition> _customLanguageDefinitions;
+    [JsonIgnore] private List<CustomLanguageDefinition> _customLanguageDefinitions = [];
 
     public List<CustomLanguageDefinition> CustomLanguages
     {
@@ -100,9 +100,9 @@ public sealed partial class AppSettings : INotifyPropertyChanged
         }
     }
 
-    [JsonIgnore] private List<string> _loadedInternalLanguages;
+    [JsonIgnore] private List<InternalLanguageDefinition> _loadedInternalLanguages = [];
 
-    public List<string> LoadedInternalLanguages
+    public List<InternalLanguageDefinition> LoadedInternalLanguages
     {
         get => _loadedInternalLanguages;
         set
@@ -112,7 +112,7 @@ public sealed partial class AppSettings : INotifyPropertyChanged
                 return;
             }
 
-            if (!value.TrueForAll(x => x.Equals(nameof(Hungarian)) || x.Equals(nameof(English))))
+            if (value.Count == 0 || !value.TrueForAll(x => x.Name.Equals(nameof(Hungarian)) || x.Name.Equals(nameof(English))))
             {
                 value = [];
             }

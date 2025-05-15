@@ -96,5 +96,51 @@ namespace QuickType.Model.Trie
                 Dfs(child, currentWord + key, result);
             }
         }
+
+        private bool _disposed = false;
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            if (disposing)
+            {
+                if (_root != null)
+                {
+                    ClearTrieNode(_root);
+                }
+            }
+
+            _disposed = true;
+        }
+
+        private void ClearTrieNode(TrieNode node)
+        {
+            if (node == null)
+            {
+                return;
+            }
+
+            foreach (var child in node.Children)
+            {
+                ClearTrieNode(child.Node);
+            }
+
+            node.Children.Clear();
+        }
+
+        ~MemoryTrie()
+        {
+            Dispose(false);
+        }
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Windows.Globalization.DateTimeFormatting;
 using QuickType.Model.Languages;
 
 namespace QuickType.Services
@@ -30,21 +31,26 @@ namespace QuickType.Services
             }
         }
 
-        public async Task LoadLanguagesAsyncTask(List<string> loadedInternalLanguages, List<CustomLanguageDefinition> customLanguageDefinitions)
+        public async Task LoadLanguagesAsyncTask(List<InternalLanguageDefinition> loadedInternalLanguages, List<CustomLanguageDefinition> customLanguageDefinitions)
         {
+            if (loadedInternalLanguages.Count == 0 && customLanguageDefinitions.Count == 0)
+            {
+                return;
+            }
+
             List<Task> loadingTasks = [];
 
             List<BaseLanguage> languagesToBeLoaded = [];
 
             foreach (var language in loadedInternalLanguages)
             {
-                switch (language)
+                switch (language.Name)
                 {
                     case nameof(Hungarian):
-                        languagesToBeLoaded.Add(new Hungarian());
+                        languagesToBeLoaded.Add(new Hungarian(language.Priority));
                         break;
                     case nameof(English):
-                        languagesToBeLoaded.Add(new English());
+                        languagesToBeLoaded.Add(new English(language.Priority));
                         break;
                 }
             }
@@ -96,24 +102,26 @@ namespace QuickType.Services
             await Task.WhenAll(loadingTasks);
         }
 
-        public async Task UnloadLanguagesAsyncTask(List<string> loadedInternalLanguages,
+        public async Task UnloadLanguagesAsyncTask(List<InternalLanguageDefinition> loadedInternalLanguages,
             List<CustomLanguageDefinition> customLanguageDefinitions)
         {
-            HashSet<string> languagesToKeep = new(loadedInternalLanguages);
-
-            foreach (var customLanguage in customLanguageDefinitions.Where(cl => cl.IsLoaded))
+            if (loadedInternalLanguages.Count == 0 && customLanguageDefinitions.Count == 0)
             {
-                languagesToKeep.Add(customLanguage.Name);
+                return;
             }
 
-            var languagesToUnload = LoadedLanguages.Where(lang => !languagesToKeep.Contains(lang.Name)).ToList();
+            var languagesToRemove = LoadedLanguages.Where(x =>
+                loadedInternalLanguages.Any(y => x.Name == y.Name) ||
+                customLanguageDefinitions.Any(y => x.Name == y.Name)).ToList();
 
-            foreach (var language in languagesToUnload)
+            foreach (var language in languagesToRemove)
             {
+                language.DisposeTrie();
                 LoadedLanguages.Remove(language);
             }
 
             await Task.CompletedTask;
         }
+
     }
 }

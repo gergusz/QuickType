@@ -8,9 +8,9 @@ using QuickType.Model.Trie;
 namespace QuickType.Model.Languages;
 internal class English : BaseLanguage
 {
-    internal English()
+    internal English(int priority)
     {
-        Priority = 0;
+        Priority = priority;
         Name = nameof(English);
         HasAccents = false;
         AccentDict = null;

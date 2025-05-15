@@ -3,7 +3,7 @@
     x:Class="QuickType.WinUI.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:local="using:QuickType"
+    xmlns:local="using:QuickType.WinUI"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:controls="using:CommunityToolkit.WinUI.Controls"
@@ -44,38 +44,53 @@
                                           HeaderIcon="{winUi:FontIcon Glyph=&#xE770;}">
                                 <ToggleSwitch IsOn="{x:Bind Settings.StartWithWindows, Mode=TwoWay}"/>
                             </controls:SettingsCard>
+                            <controls:SettingsCard Header="Beállítások visszaállítása eredeti állapotukba" Description="FIGYELEM! Ez a művelet nem visszavonható!">
+                                <Button Content="Visszaállítás" Click="ResetSettingsButton_OnClick"></Button>
+                            </controls:SettingsCard>
                         </controls:SettingsExpander.Items>
                     </controls:SettingsExpander>
                     <TextBlock Style="{StaticResource SettingsSectionHeaderTextBlockStyle}" Text="Nyelv"/>
-                    <controls:SettingsExpander Header="Betöltött nyelvek">
+                    <controls:SettingsExpander Header="Betöltött nyelvek" HeaderIcon="{winUi:FontIcon Glyph=&#xE8FD;}" x:Name="LoadedLanguagesExpander">
+                        <controls:SettingsExpander.ItemTemplate>
+                            <DataTemplate x:DataType="local:LanguageViewModel">
+                                <controls:SettingsCard Header="{x:Bind Name}" Description="{x:Bind Description}">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <NumberBox Value="{x:Bind Priority, Mode=TwoWay}" 
+                                                   Minimum="-10000" 
+                                                   Maximum="10000" 
+                                                   Width="60"
+                                                   SpinButtonPlacementMode="Compact"
+                                                   ValueChanged="LoadedLanguagePriorityInput_ValueChanged" 
+                                                   Tag="{x:Bind Name}"/>
+                                        <Button Content="Eltávolítás" 
+                                                Tag="{x:Bind Name}"
+                                                Click="UnloadLanguage_Click"/>
+                                    </StackPanel>
+                                </controls:SettingsCard>
+                            </DataTemplate>
+                        </controls:SettingsExpander.ItemTemplate>
                     </controls:SettingsExpander>
-                    <controls:SettingsExpander Header="Beépített nyelvek" HeaderIcon="{winUi:FontIcon Glyph=&#xF2B7;}" IsEnabled="False">
-                        <controls:SettingsExpander.Items>
-                            <controls:SettingsCard Header="Magyar nyelv">
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <Button x:Name="LoadHungarianButton" 
-                                            Content="Betöltés" 
-                                            Click="LoadHungarianButton_Click"
-                                            Visibility="{x:Bind IsHungarianNotLoaded, Mode=OneWay}"/>
-                                    <Button x:Name="UnloadHungarianButton" 
-                                            Content="Eltávolítás" 
-                                            Click="UnloadHungarianButton_Click"
-                                            Visibility="{x:Bind IsHungarianLoaded, Mode=OneWay}"/>
-                                </StackPanel>
-                            </controls:SettingsCard>
-                            <controls:SettingsCard Header="Angol nyelv">
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <Button x:Name="LoadEnglishButton" 
-                                            Content="Betöltés" 
-                                            Click="LoadEnglishButton_Click"
-                                            Visibility="{x:Bind IsEnglishNotLoaded, Mode=OneWay}"/>
-                                    <Button x:Name="UnloadEnglishButton" 
-                                            Content="Eltávolítás" 
-                                            Click="UnloadEnglishButton_Click"
-                                            Visibility="{x:Bind IsEnglishLoaded, Mode=OneWay}"/>
-                                </StackPanel>
-                            </controls:SettingsCard>
-                        </controls:SettingsExpander.Items>
+                    <controls:SettingsExpander Header="Beépített nyelvek" HeaderIcon="{winUi:FontIcon Glyph=&#xE7B8;}" x:Name="UnloadedInternalLanguagesExpander">
+                        <controls:SettingsExpander.ItemTemplate>
+                            <DataTemplate x:DataType="local:LanguageViewModel">
+                                <controls:SettingsCard Header="{x:Bind Name}" Description="{x:Bind Description}">
+                                        <Button Content="Betöltés" 
+                                                Tag="{x:Bind InternalName}"
+                                                Click="LoadInternalLanguage_Click"/>
+                                </controls:SettingsCard>
+                            </DataTemplate>
+                        </controls:SettingsExpander.ItemTemplate>
+                    </controls:SettingsExpander>
+                    <controls:SettingsExpander Header="Saját nyelvek" HeaderIcon="{winUi:FontIcon Glyph=&#xE81C;}" x:Name="UnloadedCustomLanguagesExpander">
+                        <controls:SettingsExpander.ItemTemplate>
+                            <DataTemplate x:DataType="local:LanguageViewModel">
+                                <controls:SettingsCard Header="{x:Bind Name}" Description="{x:Bind Description}">
+                                    <Button Content="Betöltés" 
+                                            Tag="{x:Bind Name}"
+                                            Click="LoadUnloadedCustomLanguage_Click"/>
+                                </controls:SettingsCard>
+                            </DataTemplate>
+                        </controls:SettingsExpander.ItemTemplate>
                     </controls:SettingsExpander>
                     <controls:SettingsCard Header="Saját nyelv hozzáadása">
                         <Button Content="Hozzáadás" Click="AddCustomLanguage_OnClick"></Button>
@@ -89,7 +104,7 @@
                             <controls:SettingsCard Header="Indexelés kezdése egynél" Description="Ajánlatoknál az első elem a billentyűzeten az `1`-es számbillentyűnek feleljen meg, vagy a `0`-ásnak">
                                 <ToggleSwitch IsOn="{x:Bind Settings.StartAtOne, Mode=TwoWay}"></ToggleSwitch>
                             </controls:SettingsCard>
-                            <controls:SettingsCard Header="Ékezetek javítása" Description="Mutasson-e ajánlatokat ékezettől függetlenül (Ékezeteket nem tartalmazó nyelveknél nem csinál semmit sem)">
+                            <controls:SettingsCard Header="Ékezetek javítása" Description="Mutasson-e ajánlatokat ékezettől függetlenül">
                                 <ToggleSwitch IsOn="{x:Bind Settings.IgnoreAccent, Mode=TwoWay}"></ToggleSwitch>
                             </controls:SettingsCard>
                         </controls:SettingsExpander.Items>

@@ -309,5 +309,45 @@ namespace QuickType.Model.Trie
             _memoryTrie = new MemoryTrie();
             FillMemoryTrie();
         }
+
+        private bool _disposed = false;
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposed)
+            {
+                if (disposing)
+                {
+                    _memoryTrie.Dispose();
+
+                    using var conn = new SqliteConnection(_connectionString);
+                    try
+                    {
+                        conn.Open();
+                        var closeConnectionCmd = conn.CreateCommand();
+                        closeConnectionCmd.CommandText = "PRAGMA optimize";
+                        closeConnectionCmd.ExecuteNonQuery();
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"Error closing SQLite connection: {ex.Message}");
+                    }
+                }
+
+                _disposed = true;
+            }
+        }
+
+        ~HybridTrie()
+        {
+            Dispose(false);
+        }
+
     }
 }

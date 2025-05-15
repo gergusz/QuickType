@@ -309,7 +309,7 @@ namespace QuickType
             }
         }
 
-        public async Task RequestSettingsAsync()
+        public async Task RequestSettingsAsync(bool doReset = false)
         {
             while (_pipeClient is null || _pipeStreamWriter is null || !_pipeClient.IsConnected)
             {
@@ -319,7 +319,7 @@ namespace QuickType
 
             try
             {
-                string json = JsonSerializer.Serialize(new SettingsRequestMessage());
+                string json = JsonSerializer.Serialize(new SettingsRequestMessage(doReset));
                 await _pipeStreamWriter.WriteLineAsync(json);
                 Debug.WriteLine("Sent settings request to server");
             }

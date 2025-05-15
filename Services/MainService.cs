@@ -27,16 +27,18 @@ public sealed partial class MainService(
     ILogger<MainService> logger) : BackgroundService
 {
 
-    private string currentBuffer = string.Empty;
+    private string _currentBuffer = string.Empty;
 
-    private List<Word> lastSuggestions = [];
+    private List<Word> _lastSuggestions = [];
 
     private const string PIPE_NAME = "QuickTypePipe";
     private NamedPipeServerStream? _pipeServer;
     private StreamWriter? _pipeStreamWriter;
+    private StreamWriter? _statusPipeStreamWriter;
     private StreamReader? _pipeStreamReader;
     private Task? _pipeListenerTask;
     private CancellationTokenSource? _pipeListenerCancellationTokenSource;
+
 
     protected async override Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -55,8 +57,6 @@ public sealed partial class MainService(
 
             while (!stoppingToken.IsCancellationRequested)
             {
-                //await SendStatusMessageAsync("Healthy");
-
                 await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
             }
         }
@@ -76,6 +76,7 @@ public sealed partial class MainService(
 
             _pipeServer?.Dispose();
             _pipeStreamWriter?.Dispose();
+            _statusPipeStreamWriter?.Dispose();
             _pipeStreamReader?.Dispose();
             _pipeListenerCancellationTokenSource?.Cancel();
 
@@ -89,18 +90,24 @@ public sealed partial class MainService(
         {
             ProcessKeyboardInput(str);
 
-            if (currentBuffer.Length > 1 && !string.IsNullOrWhiteSpace(str))
+            if (_currentBuffer.Length > 1 && !string.IsNullOrWhiteSpace(str))
             {
                 var caretRectangle = caretFinder.GetCaretPos();
-                var suggestions = suggestionService.GetSuggestions(languageService.LoadedLanguages, currentBuffer, 
+                var suggestions = suggestionService.GetSuggestions(languageService.LoadedLanguages, _currentBuffer, 
                     settingsService.AppSettings.IgnoreAccent, settingsService.AppSettings.MaxSuggestions);
                 if (suggestions.Count > 0)
                 {
                     _ = SendSuggestionsAsync(suggestions, caretRectangle);
+                    _ = SendStatusMessageAsync("Javaslatok elküldve...");
                 }
                 else
                 {
-                    logger.LogInformation("No suggestions found for: {CurrentBuffer}", currentBuffer);
+                    _ = SendStatusMessageAsync("Nem található javaslat!");
+                    logger.LogInformation("No suggestions found for: {CurrentBuffer}", _currentBuffer);
+                    if (keyboardCapturer.AreSuggestionsShowing)
+                    {
+                        _ = SendSuggestionsCloseMessageAsync();
+                    }
                 }
             }
         }
@@ -113,28 +120,28 @@ public sealed partial class MainService(
     {
         switch (str)
         {
-            case "\b" when currentBuffer.Length <= 1:
-                currentBuffer = string.Empty;
+            case "\b" when _currentBuffer.Length <= 1:
+                _currentBuffer = string.Empty;
                 break;
             case "\b":
-                currentBuffer = currentBuffer[..^1];
+                _currentBuffer = _currentBuffer[..^1];
                 break;
             case "\r":
             case " ":
             case "\n":
-                currentBuffer = string.Empty;
+                _currentBuffer = string.Empty;
                 _ = SendSuggestionsCloseMessageAsync();
                 break;
             case not null when str.Contains(@"\c"):
                 AcceptSuggestion((int)char.GetNumericValue(str[^1]), true); //intre cast, mert doublet ad vissza alapból (lásd ¼)
-                currentBuffer = string.Empty;
+                _currentBuffer = string.Empty;
                 _ = SendSuggestionsCloseMessageAsync();
                 break;
             default:
-                currentBuffer += str;
+                _currentBuffer += str;
                 break;
         }
-        logger.LogDebug("Current buffer: {CurrentBuffer}", currentBuffer);
+        logger.LogDebug("Current buffer: {CurrentBuffer}", _currentBuffer);
     }
 
     private async Task SendSuggestionsCloseMessageAsync()
@@ -151,10 +158,14 @@ public sealed partial class MainService(
             string json = JsonSerializer.Serialize(new CloseMessage());
             await _pipeStreamWriter.WriteLineAsync(json);
             logger.LogInformation("Sent close message to client.");
+            await SendStatusMessageAsync("Javaslatok ablak bezárása...");
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error sending close message: {Message}", ex.Message);
+        }
+        finally
+        {
         }
     }
 
@@ -181,7 +192,7 @@ public sealed partial class MainService(
                             if (selectionMessage != null)
                             {
                                 AcceptSuggestion(selectionMessage.Placement);
-                                _ = SendSuggestionsCloseMessageAsync();
+                                await SendSuggestionsCloseMessageAsync();
                             }
 
                             break;
@@ -191,7 +202,10 @@ public sealed partial class MainService(
                             {
                                 if (settingsRequestMessage.Reset)
                                 {
+                                    logger.LogInformation("Settings reset requested.");
+                                    await SendStatusMessageAsync("Beállítások visszaállítása eredeti értékekre...");
                                     await settingsService.ResetSettingsAsync();
+                                    await SendStatusMessageAsync("Beállítások visszaállítva!");
                                 }
 
                                 await SendSettingsMessageAsync();
@@ -201,20 +215,78 @@ public sealed partial class MainService(
                             var settingsMessage = JsonSerializer.Deserialize<SettingsMessage>(line);
                             if (settingsMessage != null)
                             {
-                                var oldInternalLanguages = settingsService.AppSettings.LoadedInternalLanguages ?? new List<string>();
-                                var newInternalLanguages = settingsMessage.Settings.LoadedInternalLanguages ?? new List<string>();
-                                var oldCustomLanguages = settingsService.AppSettings.CustomLanguages ?? new List<CustomLanguageDefinition>();
-                                var newCustomLanguages = settingsMessage.Settings.CustomLanguages ?? new List<CustomLanguageDefinition>();
+                                var oldInternalLanguages = settingsService.AppSettings.LoadedInternalLanguages ?? [];
+                                var newInternalLanguages = settingsMessage.Settings.LoadedInternalLanguages ?? [];
+                                var oldCustomLanguages = settingsService.AppSettings.CustomLanguages ?? [];
+                                var newCustomLanguages = settingsMessage.Settings.CustomLanguages ?? [];
 
+                                var languageCompositionChanged = !oldInternalLanguages.Select(l => l.Name).OrderBy(n => n)
+                                                                .SequenceEqual(newInternalLanguages.Select(l => l.Name).OrderBy(n => n)) ||
+                                                               !oldCustomLanguages.Select(l => (l.Name, l.IsLoaded)).OrderBy(n => n.Name)
+                                                                .SequenceEqual(newCustomLanguages.Select(l => (l.Name, l.IsLoaded)).OrderBy(n => n.Name));
 
-                                var languagesChanged = !oldInternalLanguages.SequenceEqual(newInternalLanguages) ||
-                                                        !oldCustomLanguages.Select(l => l.Name).SequenceEqual(newCustomLanguages.Select(l => l.Name));
-
-                                if (languagesChanged)
+                                if (languageCompositionChanged)
                                 {
                                     logger.LogInformation("Language configuration changed, updating language service");
-                                    await languageService.UnloadLanguagesAsyncTask(oldInternalLanguages, oldCustomLanguages);
-                                    await languageService.LoadLanguagesAsyncTask(newInternalLanguages, newCustomLanguages);
+
+                                    var internalLanguagesToUnload = oldInternalLanguages
+                                        .Where(ol => newInternalLanguages.All(nl => nl.Name != ol.Name))
+                                        .ToList();
+
+                                    var customLanguagesToUnload = oldCustomLanguages
+                                        .Where(ol => ol.IsLoaded && (newCustomLanguages.All(nl => nl.Name != ol.Name) ||
+                                                                     newCustomLanguages.FirstOrDefault(nl => nl.Name == ol.Name)?.IsLoaded == false))
+                                        .ToList();
+
+                                    if (internalLanguagesToUnload.Count > 0 || customLanguagesToUnload.Count > 0)
+                                    {
+                                        var internalNames = string.Join(", ", internalLanguagesToUnload.Select(x => x.Name));
+                                        var customNames = string.Join(", ", customLanguagesToUnload.Select(x => x.Name));
+                                        var languageNames = string.Join(", ", new[] { internalNames, customNames }.Where(s => !string.IsNullOrEmpty(s)));
+
+                                        await SendStatusMessageAsync($"{languageNames} nyelv(ek) eltávolítása...");
+                                        await languageService.UnloadLanguagesAsyncTask(internalLanguagesToUnload, customLanguagesToUnload);
+                                        await SendStatusMessageAsync($"{languageNames} nyelv(ek) eltávolítva!");
+                                    }
+
+                                    var internalLanguagesToLoad = newInternalLanguages
+                                        .Where(nl => oldInternalLanguages.All(ol => ol.Name != nl.Name))
+                                        .ToList();
+
+                                    var customLanguagesToLoad = newCustomLanguages
+                                        .Where(nl => nl.IsLoaded && (oldCustomLanguages.All(ol => ol.Name != nl.Name) ||
+                                                                     oldCustomLanguages.FirstOrDefault(ol => ol.Name == nl.Name)?.IsLoaded == false))
+                                        .ToList();
+
+                                    if (internalLanguagesToLoad.Count > 0 || customLanguagesToLoad.Count > 0)
+                                    {
+                                        var internalNames = string.Join(", ", internalLanguagesToLoad.Select(x => x.Name));
+                                        var customNames = string.Join(", ", customLanguagesToLoad.Select(x => x.Name));
+                                        var languageNames = string.Join(", ", new[] { internalNames, customNames }.Where(s => !string.IsNullOrEmpty(s)));
+
+                                        await SendStatusMessageAsync($"{languageNames} nyelv(ek) betöltése...");
+                                        await languageService.LoadLanguagesAsyncTask(internalLanguagesToLoad, customLanguagesToLoad);
+                                        await SendStatusMessageAsync($"{languageNames} nyelv(ek) betöltve!");
+                                    }
+                                }
+                                else
+                                {
+                                    var prioritiesChanged = !oldInternalLanguages.Select(x => (x.Name, x.Priority)).OrderBy(x => x.Name)
+                                                            .SequenceEqual(newInternalLanguages.Select(x => (x.Name, x.Priority)).OrderBy(x => x.Name)) ||
+                                                            !oldCustomLanguages.Where(l => l.IsLoaded).Select(x => (x.Name, x.Priority)).OrderBy(x => x.Name)
+                                                            .SequenceEqual(newCustomLanguages.Where(l => l.IsLoaded).Select(x => (x.Name, x.Priority)).OrderBy(x => x.Name));
+
+                                    if (prioritiesChanged)
+                                    {
+                                        logger.LogInformation("Language priorities changed, updating priorities");
+                                        var priorityList = newInternalLanguages
+                                            .Select(l => (l.Priority, l.Name))
+                                            .Concat(newCustomLanguages.Where(l => l.IsLoaded).Select(l => (l.Priority, l.Name)))
+                                            .ToList();
+                                        await SendStatusMessageAsync("Prioritások módosítása...");
+                                        languageService.ChangeLanguagePriorities(priorityList);
+                                        await SendStatusMessageAsync("Prioritások módosítva!");
+                                    }
                                 }
 
                                 await settingsService.HandleSettingsMessageAsync(settingsMessage.Settings);
@@ -263,10 +335,12 @@ public sealed partial class MainService(
                 number = 9;
             }
         }
-        if (lastSuggestions.Count > number)
+        if (_lastSuggestions.Count > number)
         {
-            string suggestion = lastSuggestions[number].word;
-            inputSimulator.SimulateInputString(suggestion.RemoveFirst(currentBuffer), wasCtrlUsed);
+            _ = SendStatusMessageAsync("Javaslat elfogadása...");
+            string suggestion = _lastSuggestions[number].word;
+            inputSimulator.SimulateInputString(suggestion.RemoveFirst(_currentBuffer), wasCtrlUsed);
+            _ = SendStatusMessageAsync("Javaslat elfogadva!");
             logger.LogInformation("Accepted suggestion: {Suggestion}", suggestion);
         }
         else
@@ -280,8 +354,8 @@ public sealed partial class MainService(
         {
             logger.LogInformation("Loading languages from settings...");
 
-            var internalLanguages = settingsService.AppSettings.LoadedInternalLanguages ?? new List<string>();
-            var customLanguages = settingsService.AppSettings.CustomLanguages ?? new List<CustomLanguageDefinition>();
+            var internalLanguages = settingsService.AppSettings.LoadedInternalLanguages ?? [];
+            var customLanguages = settingsService.AppSettings.CustomLanguages ?? [];
 
             await languageService.LoadLanguagesAsyncTask(internalLanguages, customLanguages);
 
@@ -310,6 +384,11 @@ public sealed partial class MainService(
             {
                 AutoFlush = true
             };
+
+            _statusPipeStreamWriter = new StreamWriter(_pipeServer)
+            {
+                AutoFlush = true
+            };
         }
         catch (OperationCanceledException)
         {
@@ -331,7 +410,7 @@ public sealed partial class MainService(
 
         try
         {
-            lastSuggestions = suggestions;
+            _lastSuggestions = suggestions;
             keyboardCapturer.AreSuggestionsShowing = true;
             SuggestionMessage message = new(suggestions, caretPosition);
             string json = JsonSerializer.Serialize(message);
@@ -346,7 +425,7 @@ public sealed partial class MainService(
 
     private async Task SendStatusMessageAsync(string message)
     {
-        if (_pipeServer is null || _pipeStreamWriter is null || !_pipeServer.IsConnected)
+        if (_pipeServer is null || _statusPipeStreamWriter is null || !_pipeServer.IsConnected)
         {
             logger.LogWarning("Pipe server is not connected.");
             return;
@@ -355,7 +434,7 @@ public sealed partial class MainService(
         {
             StatusMessage statusMessage = new(message);
             string json = JsonSerializer.Serialize(statusMessage);
-            await _pipeStreamWriter.WriteLineAsync(json);
+            await _statusPipeStreamWriter.WriteLineAsync(json);
             logger.LogInformation("Sent status message to client: {Message}", message);
         }
         catch (Exception ex)

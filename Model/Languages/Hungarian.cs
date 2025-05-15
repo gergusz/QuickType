@@ -12,9 +12,9 @@ namespace QuickType.Model.Languages
 {
     internal class Hungarian : BaseLanguage
     {
-        internal Hungarian()
+        internal Hungarian(int priority)
         {
-            Priority = 10;
+            Priority = priority;
             Name = nameof(Hungarian);
             HasAccents = true;
             AccentDict = new Dictionary<char, List<char>>()
