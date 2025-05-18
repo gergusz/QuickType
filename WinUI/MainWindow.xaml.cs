@@ -81,7 +81,7 @@ public sealed partial class MainWindow : WindowEx
         }
     }
 
-    private async Task SaveSettings()
+    public async Task SaveSettings()
     {
         await App.Current.SendSettingsMessageAsync(Settings);
     }
@@ -122,7 +122,7 @@ public sealed partial class MainWindow : WindowEx
         return tcs.Task;
     }
 
-    private void UpdateAllLanguageLists()
+    public void UpdateAllLanguageLists()
     {
         UpdateLoadedLanguagesList();
         UpdateUnloadedInternalLanguagesList();
@@ -343,7 +343,7 @@ public sealed partial class MainWindow : WindowEx
         _ = SaveSettings();
     }
 
-    private int GetNearestPriority()
+    public int GetNearestPriority()
     {
         if (LoadedLanguageItems.Count == 0)
         {

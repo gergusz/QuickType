@@ -484,16 +484,58 @@ namespace QuickType
 
         private unsafe void ShowContextMenu()
         {
-            var hMenu = PInvoke.CreatePopupMenu();
+            Current.MainWindow ??= new();
 
+            var hMenu = PInvoke.CreatePopupMenu();
             SafeHandle safeHMenu = new DestroyMenuSafeHandle(hMenu, false);
 
-            PInvoke.AppendMenu(safeHMenu, MENU_ITEM_FLAGS.MF_STRING, ID_OPEN_SETTINGS, "Settings");
+            var hInternalMenu = PInvoke.CreatePopupMenu();
+            SafeHandle safeHInternalMenu = new DestroyMenuSafeHandle(hInternalMenu, false);
+            uint internalIdBase = 2000;
+            uint internalIndex = 0;
+            foreach (var lang in MainWindow?.Settings.LoadedInternalLanguages ?? [])
+            {
+                var isChecked = true;
+                PInvoke.AppendMenu(safeHInternalMenu, MENU_ITEM_FLAGS.MF_STRING | (isChecked ? MENU_ITEM_FLAGS.MF_CHECKED : 0), internalIdBase + internalIndex, lang.Name == nameof(Hungarian) ? "Magyar" : "Angol");
+                internalIndex++;
+            }
+            foreach (var lang in new[] { nameof(Hungarian), nameof(English) })
+            {
+                if (!(Current.MainWindow!.Settings.LoadedInternalLanguages.Any(l => l.Name == lang)))
+                {
+                    var isChecked = false;
+                    PInvoke.AppendMenu(safeHInternalMenu, MENU_ITEM_FLAGS.MF_STRING | (isChecked ? MENU_ITEM_FLAGS.MF_CHECKED : 0), internalIdBase + internalIndex, lang == nameof(Hungarian) ? "Magyar" : "Angol");
+                    internalIndex++;
+                }
+            }
+            PInvoke.AppendMenu(safeHMenu, MENU_ITEM_FLAGS.MF_POPUP, new(hInternalMenu.Value), "Beépített nyelvek");
+
+            if (Current.MainWindow!.Settings.CustomLanguages.Count == 0)
+            {
+                PInvoke.AppendMenu(safeHMenu, MENU_ITEM_FLAGS.MF_STRING | MENU_ITEM_FLAGS.MF_DISABLED, 0, "Nincsenek egyéni nyelvek");
+            }
+            else
+            {
+                var hCustomMenu = PInvoke.CreatePopupMenu();
+                SafeHandle safeHCustomMenu = new DestroyMenuSafeHandle(hCustomMenu, false);
+                uint customIdBase = 3000;
+                uint customIndex = 0;
+                foreach (var lang in Current.MainWindow!.Settings.CustomLanguages)
+                {
+                    var isChecked = lang.IsLoaded;
+                    PInvoke.AppendMenu(safeHCustomMenu, MENU_ITEM_FLAGS.MF_STRING | (isChecked ? MENU_ITEM_FLAGS.MF_CHECKED : 0), customIdBase + customIndex, lang.Name);
+                    customIndex++;
+                }
+
+                PInvoke.AppendMenu(safeHMenu, MENU_ITEM_FLAGS.MF_POPUP, new(hCustomMenu.Value), "Egyéni nyelvek");
+            }
+
             PInvoke.AppendMenu(safeHMenu, MENU_ITEM_FLAGS.MF_SEPARATOR, 0, null);
-            PInvoke.AppendMenu(safeHMenu, MENU_ITEM_FLAGS.MF_STRING, ID_EXIT, "Exit");
+            PInvoke.AppendMenu(safeHMenu, MENU_ITEM_FLAGS.MF_STRING, ID_OPEN_SETTINGS, "Beállítások");
+            PInvoke.AppendMenu(safeHMenu, MENU_ITEM_FLAGS.MF_SEPARATOR, 0, null);
+            PInvoke.AppendMenu(safeHMenu, MENU_ITEM_FLAGS.MF_STRING, ID_EXIT, "Kilépés");
 
             PInvoke.GetCursorPos(out var pt);
-
             PInvoke.SetForegroundWindow(new HWND(_windowHandle));
 
             var selected = (uint)PInvoke.TrackPopupMenu(
@@ -506,9 +548,59 @@ namespace QuickType
 
             switch (selected)
             {
+                case >= 2000 and < 3000:
+                {
+                    var idx = selected - 2000;
+                    var allInternal = new List<string>();
+                    allInternal.AddRange(MainWindow?.Settings.LoadedInternalLanguages.Select(l => l.Name) ?? []);
+                    allInternal.AddRange(new[] { nameof(Hungarian), nameof(English) }.Where(lang => !(MainWindow?.Settings.LoadedInternalLanguages.Any(l => l.Name == lang) ?? false)));
+                    if (idx < allInternal.Count)
+                    {
+                        var langName = allInternal[(int)idx];
+                        var loaded = MainWindow?.Settings.LoadedInternalLanguages.Any(l => l.Name == langName) ?? false;
+                        if (loaded)
+                        {
+                            var lang = MainWindow?.Settings.LoadedInternalLanguages.FirstOrDefault(l => l.Name == langName);
+                            if (lang != null)
+                            {
+                                Current.MainWindow!.Settings.LoadedInternalLanguages.Remove(lang);
+                                Current.MainWindow.UpdateAllLanguageLists();
+                                _ = Current.MainWindow.SaveSettings();
+                            }
+                        }
+                        else
+                        {
+                            var newLang = new InternalLanguageDefinition(langName, Current.MainWindow!.GetNearestPriority());
+                            Current.MainWindow.Settings.LoadedInternalLanguages.Add(newLang);
+                            Current.MainWindow.UpdateAllLanguageLists();
+                            _ = Current.MainWindow.SaveSettings();
+                        }
+                    }
+                    return;
+                }
+                case >= 3000 and < 4000:
+                {
+                    var idx = selected - 3000;
+                    var customLangs = MainWindow?.Settings.CustomLanguages ?? [];
+                    if (idx < customLangs.Count)
+                    {
+                        var lang = customLangs[(int)idx];
+                        if (lang.IsLoaded)
+                        {
+                            lang.IsLoaded = false;
+                        }
+                        else
+                        {
+                            lang.IsLoaded = true;
+                            lang.Priority = Current.MainWindow!.GetNearestPriority();
+                        }
+                        Current.MainWindow!.UpdateAllLanguageLists();
+                        _ = Current.MainWindow!.SaveSettings();
+                    }
+                    return;
+                }
                 case ID_OPEN_SETTINGS:
-                    MainWindow ??= new();
-                    MainWindow!.Activate();
+                    Current.MainWindow!.Activate();
                     break;
                 case ID_EXIT:
                     Current.Exit();
