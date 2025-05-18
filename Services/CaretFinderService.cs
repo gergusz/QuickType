@@ -14,7 +14,7 @@ using WinRT.Interop;
 
 namespace QuickType.Services
 {
-    public class CaretFinder
+    public class CaretFinderService
     {
         public unsafe CaretRectangle? GetCaretPos()
         {

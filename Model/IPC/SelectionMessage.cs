@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace QuickType.Model.IPC
 {
-    public record SelectionMessage(int Placement, string? Error = null) : BaseIpcMessage(IpcMessageType.SelectionMessage, Error)
+    public record SelectionMessage(int? Placement, string? Word, string? Error = null) : BaseIpcMessage(IpcMessageType.SelectionMessage, Error)
     {
     }
 }

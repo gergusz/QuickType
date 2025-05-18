@@ -12,6 +12,7 @@ using QuickType.Model.IPC;
 using QuickType.Model.Languages;
 using WinUIEx;
 using System.Xml.Linq;
+using Microsoft.UI.Xaml.Media;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -31,6 +32,10 @@ public sealed partial class MainWindow : WindowEx
     public MainWindow()
     {
         this.InitializeComponent();
+
+        ExtendsContentIntoTitleBar = true;
+        SetTitleBar(TitleBorder);
+
         Closed += MainWindow_Closed;
 
         LoadingOverlay.Visibility = Visibility.Visible;
@@ -148,6 +153,7 @@ public sealed partial class MainWindow : WindowEx
                 Name = internalLanguage.Name,
                 Priority = internalLanguage.Priority,
                 Description = "Beépített nyelv",
+                IsCustom = false
             });
         }
 
@@ -188,6 +194,7 @@ public sealed partial class MainWindow : WindowEx
                 Name = "Magyar",
                 Description = "Beépített nyelv",
                 InternalName = nameof(Hungarian),
+                IsCustom = false
             });
         }
 
@@ -198,6 +205,7 @@ public sealed partial class MainWindow : WindowEx
                 Name = "Angol",
                 Description = "Beépített nyelv",
                 InternalName = nameof(English),
+                IsCustom = false
             });
         }
 
@@ -258,7 +266,6 @@ public sealed partial class MainWindow : WindowEx
         }
     }
 
-
     private void LoadUnloadedCustomLanguage_Click(object sender, RoutedEventArgs e)
     {
         var button = sender as Button;
@@ -300,7 +307,6 @@ public sealed partial class MainWindow : WindowEx
         }
     }
 
-
     private void LoadedLanguagePriorityInput_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
     {
         if (sender.Tag is not string languageName)
@@ -337,7 +343,6 @@ public sealed partial class MainWindow : WindowEx
         _ = SaveSettings();
     }
 
-
     private int GetNearestPriority()
     {
         if (LoadedLanguageItems.Count == 0)
@@ -350,7 +355,6 @@ public sealed partial class MainWindow : WindowEx
         return Math.Min(maxPriority + 1, 10000);
     }
 
-
     private void ResetSettingsButton_OnClick(object sender, RoutedEventArgs e)
     {
         LoadingOverlay.Visibility = Visibility.Visible;
@@ -361,5 +365,41 @@ public sealed partial class MainWindow : WindowEx
         UnloadedCustomLanguageItems.Clear();
 
         Task.Run(() => App.Current.RequestSettingsAsync(true));
+    }
+
+    private void ReloadUnloadedCustomLanguage_Click(object sender, RoutedEventArgs e)
+    {
+        var button = sender as Button;
+        if (button != null)
+        {
+            var languageName = button.Tag as string;
+            if (!string.IsNullOrEmpty(languageName))
+            {
+                var customLanguage = Settings.CustomLanguages.FirstOrDefault(l => l.Name == languageName && l.IsLoaded);
+                if (customLanguage != null)
+                {
+                    Task.Run(() => App.Current.SendRecreateLanguageDatabaseAsync(customLanguage));
+                }
+            }
+        }
+    }
+
+    private void RemoveUnloadedCustomLanguage_Click(object sender, RoutedEventArgs e)
+    {
+        var button = sender as Button;
+        if (button != null)
+        {
+            var languageName = button.Tag as string;
+            if (!string.IsNullOrEmpty(languageName))
+            {
+                var customLanguage = Settings.CustomLanguages.FirstOrDefault(l => l.Name == languageName && !l.IsLoaded);
+                if (customLanguage != null)
+                {
+                    Settings.CustomLanguages.Remove(customLanguage);
+                    UpdateAllLanguageLists();
+                    _ = SaveSettings();
+                }
+            }
+        }
     }
 }

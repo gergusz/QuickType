@@ -12,8 +12,7 @@ using Windows.Win32.UI.WindowsAndMessaging;
 
 namespace QuickType.Services
 {
-
-    public class KeyboardCapturer
+    public class KeyboardCapturerService
     {
         private const nuint WM_KEYDOWN = 0x0100;
         private const nuint WM_SYSKEYDOWN = 0x0104;
@@ -88,7 +87,7 @@ namespace QuickType.Services
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in KeyboardCapturer.Start: {ex.Message}");
+                Debug.WriteLine($"Error in KeyboardCapturerService.Start: {ex.Message}");
                 Stop();
                 throw;
             }

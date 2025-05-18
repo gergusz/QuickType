@@ -59,7 +59,11 @@ namespace QuickType.Model.Trie
         private void SearchWithAccents(TrieNode? node, string prefix, int index, string currentPrefix,
             List<Word> result, Dictionary<char, List<char>> accentDictionary)
         {
-            if (node is null) return;
+            if (node is null)
+            {
+                return;
+            }
+
             if (index >= prefix.Length)
             {
                 Dfs(node, currentPrefix, result);
@@ -84,7 +88,7 @@ namespace QuickType.Model.Trie
             }
         }
 
-        private static void Dfs(TrieNode node, string currentWord, List<Word> result)
+        private void Dfs(TrieNode node, string currentWord, List<Word> result)
         {
             if (node.IsEndOfWord)
             {

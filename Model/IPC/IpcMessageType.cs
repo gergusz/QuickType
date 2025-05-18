@@ -8,5 +8,7 @@ public enum IpcMessageType
     SelectionMessage,
     CloseMessage,
     SettingsMessage,
-    SettingsRequestMessage
+    SettingsRequestMessage,
+    RecreateLanguageDatabaseMessage,
+    ServiceShutdownMessage
 }

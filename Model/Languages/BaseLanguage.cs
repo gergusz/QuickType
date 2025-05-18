@@ -45,43 +45,24 @@ namespace QuickType.Model.Languages
             Trie!.Insert(word, frequency);
         }
 
-        public void ChangeFrequencyOfHybridTrie(int newFrequency)
+        public void DeleteLanguage()
         {
-            if (!IsTrieLoaded)
+            if (IsTrieLoaded)
             {
-                throw new InvalidOperationException("Trie is not loaded.");
+                throw new InvalidOperationException("Trie is loaded, will not delete!");
             }
 
             if (Trie is HybridTrie hybridTrie)
             {
-                hybridTrie.ChangeFrequency(newFrequency);
+                hybridTrie.DeleteDatabase();
             }
-            else
-            {
-                throw new InvalidOperationException("Trie is not a HybridTrie.");
-            }
+
+            DisposeTrie();
         }
 
-        public void ForceRecreateDatabaseOfHybridTrie()
+        public void LoadHybridTrie(int frequencyThreshhold = 10)
         {
-            if (!IsTrieLoaded)
-            {
-                throw new InvalidOperationException("Trie is not loaded.");
-            }
-
-            if (Trie is HybridTrie hybridTrie)
-            {
-                hybridTrie.RecreateDatabase();
-            }
-            else
-            {
-                throw new InvalidOperationException("Trie is not a HybridTrie.");
-            }
-        }
-
-        public void LoadHybridTrie(int frequencyThreshhold = 10, bool forceRecreate = false)
-        {
-            Trie = new HybridTrie(Name, frequencyThreshhold, forceRecreate);
+            Trie = new HybridTrie(Name, frequencyThreshhold);
         }
 
         public void DisposeTrie()

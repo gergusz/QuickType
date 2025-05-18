@@ -38,7 +38,7 @@ namespace QuickType.Services
 
             if (e.PropertyName == nameof(AppSettings.StartWithWindows))
             {
-                RegistryKey regKey = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", true);
+                var regKey = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", true);
 
                 if (AppSettings.StartWithWindows)
                 {

@@ -30,4 +30,10 @@ public class LanguageViewModel
         get;
         set;
     }
+
+    public bool IsCustom
+    {
+        get;
+        init;
+    } = true;
 }

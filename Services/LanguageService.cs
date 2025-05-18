@@ -123,5 +123,39 @@ namespace QuickType.Services
             await Task.CompletedTask;
         }
 
+        public async Task RecreateDatabaseOfLanguage(CustomLanguageDefinition customLanguageDefinition)
+        {
+            if (LoadedLanguages.All(x => x.Name != customLanguageDefinition.Name))
+            {
+                return;
+            }
+            var language = LoadedLanguages.First(x => x.Name == customLanguageDefinition.Name);
+            if (language is CustomLanguage customLanguage)
+            {
+                customLanguage.ForceRecreateDatabase();
+            }
+            await Task.CompletedTask;
+        }
+
+        public async Task DeleteLanguagesAsyncTask(List<CustomLanguageDefinition> languagesToDelete)
+        {
+            foreach (var languageDefinition in languagesToDelete)
+            {
+                if (LoadedLanguages.All(x => x.Name == languageDefinition.Name))
+                {
+                    continue;
+                }
+                var language = LoadedLanguages.First(x => x.Name == languageDefinition.Name);
+                if (language is CustomLanguage customLanguage)
+                {
+                    customLanguage.DeleteLanguage();
+                    LoadedLanguages.Remove(language);
+                }
+                else
+                {
+                    throw new InvalidOperationException($"Language {languageDefinition.Name} is not a CustomLanguage.");
+                }
+            }
+        }
     }
 }

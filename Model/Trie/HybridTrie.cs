@@ -19,7 +19,7 @@ namespace QuickType.Model.Trie
         private readonly string? _filePath;
         private readonly string? _readString;
 
-        internal HybridTrie(string name, int frequencyThreshold = 10, bool forceRecreate = false)
+        internal HybridTrie(string name, int frequencyThreshold = 10)
         {
             _memoryTrie = new MemoryTrie();
             _connectionString =
@@ -39,7 +39,7 @@ namespace QuickType.Model.Trie
                 _embeddedResourceName = null;
             }
 
-            if (forceRecreate || !Path.Exists($"{_connectionString.Split("=")[1]}"))
+            if (!Path.Exists($"{_connectionString.Split("=")[1]}"))
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(_connectionString.Split("=")[1])!);
                 RecreateDatabase();
@@ -48,8 +48,8 @@ namespace QuickType.Model.Trie
             FillMemoryTrie();
         }
 
-        public HybridTrie(string name, string filePath, string readString, int frequencyThreshhold = 10, bool forceRecreate = false) 
-            : this (name, frequencyThreshhold, forceRecreate)
+        public HybridTrie(string name, string filePath, string readString, int frequencyThreshhold = 10) 
+            : this (name, frequencyThreshhold)
         {
             _filePath = filePath;
             _readString = readString;
@@ -182,6 +182,14 @@ namespace QuickType.Model.Trie
             }
 
             transaction.Commit();
+        }
+
+        public void DeleteDatabase()
+        {
+            if (Path.Exists($"{_connectionString.Split("=")[1]}"))
+            {
+                File.Delete($"{_connectionString.Split("=")[1]}");
+            }
         }
 
         public void Insert(string word, int frequency)

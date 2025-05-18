@@ -12,7 +12,7 @@ namespace QuickType.Services
     {
         internal List<Word> GetSuggestions(List<BaseLanguage> loadedLanguages, string currentBuffer, bool ignoreAccent, int maxSuggestionCount)
         {
-           var suggestions = new List<Word>();
+            var suggestions = new List<Word>();
             foreach (var language in loadedLanguages.OrderBy(x => x.Priority))
             {
                 if (!language.IsTrieLoaded)

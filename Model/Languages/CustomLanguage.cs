@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using QuickType.Model.Trie;
 
 namespace QuickType.Model.Languages;
+
 internal class CustomLanguage : BaseLanguage
 {
     private string _filePath;
@@ -15,16 +16,19 @@ internal class CustomLanguage : BaseLanguage
     private int? _frequencyThreshold;
     public bool UsesHybridTrie;
 
-    internal CustomLanguage(string name, int priority, bool hasAccents, Dictionary<char, List<char>>? accentDict, bool usesHybridTrie, int? frequencyThreshold, string filePath, string readString)
+    internal CustomLanguage(string name, int priority, bool hasAccents, Dictionary<char, List<char>>? accentDict,
+        bool usesHybridTrie, int? frequencyThreshold, string filePath, string readString)
     {
         if (name is nameof(Hungarian) or nameof(English))
         {
             throw new ArgumentException($"Name cannot be {nameof(Hungarian)}, or {nameof(English)}.");
         }
+
         if (usesHybridTrie && frequencyThreshold is null)
         {
             throw new ArgumentException("Frequency threshold must be provided when using HybridTrie.");
         }
+
         Name = name;
         Priority = priority;
         HasAccents = hasAccents;
@@ -36,9 +40,9 @@ internal class CustomLanguage : BaseLanguage
     }
 
 
-    public new void LoadHybridTrie(bool forceRecreate = false)
+    public void LoadHybridTrie()
     {
-        Trie = new HybridTrie(Name, _filePath, _readString, _frequencyThreshold ?? 10, forceRecreate);
+        Trie = new HybridTrie(Name, _filePath, _readString, _frequencyThreshold ?? 10);
     }
 
     public void LoadMemoryTrie()
@@ -97,4 +101,17 @@ internal class CustomLanguage : BaseLanguage
             }
         }
     }
+
+    public void ForceRecreateDatabase()
+    {
+        if (UsesHybridTrie && Trie is HybridTrie hybridTrie)
+        {
+            hybridTrie.RecreateDatabase();
+        }
+        else if (Trie is MemoryTrie)
+        {
+            LoadMemoryTrie();
+        }
+    }
+
 }

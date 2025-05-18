@@ -94,7 +94,34 @@ namespace QuickType
             Current = this;
             Environment.SetEnvironmentVariable("MICROSOFT_WINDOWSAPPRUNTIME_BASE_DIRECTORY", AppContext.BaseDirectory);
             this.InitializeComponent();
+
+            this.UnhandledException += App_UnhandledException;
         }
+
+        private void App_UnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
+        {
+            Debug.WriteLine($"Unhandled exception: {e.Message}\n{e.Exception}");
+
+            Task.Run(SendServiceShutdownAsync);
+
+            var dispatcher = DispatcherQueue.GetForCurrentThread();
+            dispatcher.TryEnqueue(async void () =>
+            {
+                var dialog = new ContentDialog
+                {
+                    Title = "Hiba",
+                    Content = $"Váratlan hiba történt:\n{e.Exception.Message}",
+                    CloseButtonText = "Bezárás",
+                    XamlRoot = MainWindow?.Content.XamlRoot ?? SuggestionsWindow?.Content.XamlRoot
+                };
+
+                await dialog.ShowAsync();
+                Current.Exit();
+            });
+
+            e.Handled = true;
+        }
+
 
         /// <summary>
         /// Invoked when the application is launched.
@@ -127,9 +154,9 @@ namespace QuickType
         {
             _host = Host.CreateDefaultBuilder().ConfigureServices((_, services) =>
             {
-                services.AddSingleton<KeyboardCapturer>();
-                services.AddSingleton<CaretFinder>();
-                services.AddSingleton<InputSimulator>();
+                services.AddSingleton<KeyboardCapturerService>();
+                services.AddSingleton<CaretFinderService>();
+                services.AddSingleton<InputSimulatorService>();
                 services.AddSingleton<SuggestionService>();
                 services.AddSingleton<LanguageService>();
                 services.AddSingleton<SettingsService>();
@@ -299,9 +326,29 @@ namespace QuickType
 
             try
             {
-                string json = JsonSerializer.Serialize(new SelectionMessage(placement));
+                string json = JsonSerializer.Serialize(new SelectionMessage(placement, null));
                 await _pipeStreamWriter.WriteLineAsync(json);
                 Debug.WriteLine($"Sent selection message to client: {placement}");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.Message);
+            }
+        }
+
+        public async Task SendSelectionMessageAsync(string word)
+        {
+            while (_pipeClient is null || _pipeStreamWriter is null || !_pipeClient.IsConnected)
+            {
+                await Task.Delay(1000);
+                Debug.WriteLine("Pipe client is not connected. Retrying...");
+            }
+
+            try
+            {
+                string json = JsonSerializer.Serialize(new SelectionMessage(null, word));
+                await _pipeStreamWriter.WriteLineAsync(json);
+                Debug.WriteLine($"Sent selection message to client: {word}");
             }
             catch (Exception ex)
             {
@@ -471,8 +518,43 @@ namespace QuickType
 
         private new void Exit()
         {
+            Task.Run(SendServiceShutdownAsync);
             serviceProcess?.Kill();
             base.Exit();
+        }
+
+        public async Task SendRecreateLanguageDatabaseAsync(CustomLanguageDefinition language)
+        {
+            while (_pipeClient is null || _pipeStreamWriter is null || !_pipeClient.IsConnected)
+            {
+                await Task.Delay(1000);
+                Debug.WriteLine("Pipe client is not connected. Retrying...");
+            }
+
+            try
+            {
+                string json = JsonSerializer.Serialize(new RecreateLanguageDatabaseMessage(language));
+                await _pipeStreamWriter.WriteLineAsync(json);
+                Debug.WriteLine("Send database recreation message to server...");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.Message);
+            }
+        }
+
+        private async Task SendServiceShutdownAsync()
+        {
+            try
+            {
+                string json = JsonSerializer.Serialize(new ServiceShutdownMessage());
+                await _pipeStreamWriter.WriteLineAsync(json);
+                Debug.WriteLine("Send shutdown message to service...");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.Message);
+            }
         }
     }
 

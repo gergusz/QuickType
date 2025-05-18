@@ -11,7 +11,7 @@ using Windows.Win32.UI.Input.KeyboardAndMouse;
 
 namespace QuickType.Services
 {
-    public class InputSimulator
+    public class InputSimulatorService
     {
         public void SimulateInputString(string input, bool wasCtrlUsed)
         {

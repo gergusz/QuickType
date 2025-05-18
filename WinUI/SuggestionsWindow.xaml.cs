@@ -68,15 +68,16 @@ public sealed partial class SuggestionsWindow : WindowEx
                 Padding = new Thickness(3),
                 FontSize = 14,
                 Background = new SolidColorBrush(Colors.Transparent),
-                BorderBrush = new SolidColorBrush(Colors.Transparent),
-                Foreground = new SolidColorBrush(Colors.White)
+                BorderBrush = new SolidColorBrush(Colors.Transparent)
             };
             completeButton.Click += async (s, e) =>
             {
-                await App.Current.SendSelectionMessageAsync((int)char.GetNumericValue(completeButton.Name[^1]));
-
                 var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
                 PInvoke.ShowWindow((Windows.Win32.Foundation.HWND)hwnd, SHOW_WINDOW_CMD.SW_HIDE);
+
+                await Task.Delay(100);
+
+                await App.Current.SendSelectionMessageAsync(suggestion.word);
             };
             SuggestionsStackPanel.Children.Add(completeButton);
         }

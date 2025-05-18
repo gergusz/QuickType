@@ -18,9 +18,9 @@ using QuickType.Model.Languages;
 namespace QuickType.Services;
 
 public sealed partial class MainService(
-    KeyboardCapturer keyboardCapturer,
-    CaretFinder caretFinder,
-    InputSimulator inputSimulator,
+    KeyboardCapturerService keyboardCapturerService,
+    CaretFinderService caretFinderService,
+    InputSimulatorService inputSimulatorService,
     SuggestionService suggestionService,
     LanguageService languageService,
     SettingsService settingsService,
@@ -51,8 +51,8 @@ public sealed partial class MainService(
 
             await LoadLanguagesFromSettingsAsync();
 
-            keyboardCapturer.KeyboardEvent += KeyboardCapturer_KeyboardEvent;
-            keyboardCapturer.Start();
+            keyboardCapturerService.KeyboardEvent += KeyboardCapturer_KeyboardEvent;
+            keyboardCapturerService.Start();
             logger.LogInformation("Keyboard capture started.");
 
             while (!stoppingToken.IsCancellationRequested)
@@ -71,8 +71,8 @@ public sealed partial class MainService(
         }
         finally
         {
-            keyboardCapturer.KeyboardEvent -= KeyboardCapturer_KeyboardEvent;
-            keyboardCapturer.Stop();
+            keyboardCapturerService.KeyboardEvent -= KeyboardCapturer_KeyboardEvent;
+            keyboardCapturerService.Stop();
 
             _pipeServer?.Dispose();
             _pipeStreamWriter?.Dispose();
@@ -86,13 +86,19 @@ public sealed partial class MainService(
 
     private void KeyboardCapturer_KeyboardEvent(string str)
     {
+        if (languageService.LoadedLanguages.Count == 0)
+        {
+            logger.LogWarning("No languages loaded, ignoring keyboard event.");
+            return;
+        }
+
         try
         {
             ProcessKeyboardInput(str);
 
             if (_currentBuffer.Length > 1 && !string.IsNullOrWhiteSpace(str))
             {
-                var caretRectangle = caretFinder.GetCaretPos();
+                var caretRectangle = caretFinderService.GetCaretPos();
                 var suggestions = suggestionService.GetSuggestions(languageService.LoadedLanguages, _currentBuffer, 
                     settingsService.AppSettings.IgnoreAccent, settingsService.AppSettings.MaxSuggestions);
                 if (suggestions.Count > 0)
@@ -104,7 +110,7 @@ public sealed partial class MainService(
                 {
                     _ = SendStatusMessageAsync("Nem található javaslat!");
                     logger.LogInformation("No suggestions found for: {CurrentBuffer}", _currentBuffer);
-                    if (keyboardCapturer.AreSuggestionsShowing)
+                    if (keyboardCapturerService.AreSuggestionsShowing)
                     {
                         _ = SendSuggestionsCloseMessageAsync();
                     }
@@ -133,7 +139,7 @@ public sealed partial class MainService(
                 _ = SendSuggestionsCloseMessageAsync();
                 break;
             case not null when str.Contains(@"\c"):
-                AcceptSuggestion((int)char.GetNumericValue(str[^1]), true); //intre cast, mert doublet ad vissza alapból (lásd ¼)
+                AcceptSuggestion((int)char.GetNumericValue(str[^1]), null, true); //intre cast, mert doublet ad vissza alapból (lásd ¼)
                 _currentBuffer = string.Empty;
                 _ = SendSuggestionsCloseMessageAsync();
                 break;
@@ -154,7 +160,12 @@ public sealed partial class MainService(
 
         try
         {
-            keyboardCapturer.AreSuggestionsShowing = false;
+            if (!keyboardCapturerService.AreSuggestionsShowing)
+            {
+                return;
+            }
+
+            keyboardCapturerService.AreSuggestionsShowing = false;
             string json = JsonSerializer.Serialize(new CloseMessage());
             await _pipeStreamWriter.WriteLineAsync(json);
             logger.LogInformation("Sent close message to client.");
@@ -191,7 +202,7 @@ public sealed partial class MainService(
                             var selectionMessage = JsonSerializer.Deserialize<SelectionMessage>(line);
                             if (selectionMessage != null)
                             {
-                                AcceptSuggestion(selectionMessage.Placement);
+                                AcceptSuggestion(selectionMessage.Placement, selectionMessage.Word);
                                 await SendSuggestionsCloseMessageAsync();
                             }
 
@@ -244,9 +255,18 @@ public sealed partial class MainService(
                                         var customNames = string.Join(", ", customLanguagesToUnload.Select(x => x.Name));
                                         var languageNames = string.Join(", ", new[] { internalNames, customNames }.Where(s => !string.IsNullOrEmpty(s)));
 
-                                        await SendStatusMessageAsync($"{languageNames} nyelv(ek) eltávolítása...");
+                                        await SendStatusMessageAsync($"{languageNames} nyelv eltávolítása...");
                                         await languageService.UnloadLanguagesAsyncTask(internalLanguagesToUnload, customLanguagesToUnload);
-                                        await SendStatusMessageAsync($"{languageNames} nyelv(ek) eltávolítva!");
+                                        await SendStatusMessageAsync($"{languageNames} nyelv eltávolítva!");
+                                    }
+                                    else if (oldCustomLanguages.Count > newCustomLanguages.Count) //not to unload, but to remove
+                                    {
+                                        var languagesToDelete = oldCustomLanguages.Where(ol => !ol.IsLoaded && newCustomLanguages.All(nl => nl.Name != ol.Name))
+                                            .ToList();
+
+                                        await SendStatusMessageAsync($"{string.Join(", ", languagesToDelete.Select(x => x.Name))} nyelv törlése...");
+                                        await languageService.DeleteLanguagesAsyncTask(languagesToDelete);
+                                        await SendStatusMessageAsync($"{string.Join(", ", languagesToDelete.Select(x => x.Name))} nyelv törölve!");
                                     }
 
                                     var internalLanguagesToLoad = newInternalLanguages
@@ -264,9 +284,9 @@ public sealed partial class MainService(
                                         var customNames = string.Join(", ", customLanguagesToLoad.Select(x => x.Name));
                                         var languageNames = string.Join(", ", new[] { internalNames, customNames }.Where(s => !string.IsNullOrEmpty(s)));
 
-                                        await SendStatusMessageAsync($"{languageNames} nyelv(ek) betöltése...");
+                                        await SendStatusMessageAsync($"{languageNames} nyelv betöltése...");
                                         await languageService.LoadLanguagesAsyncTask(internalLanguagesToLoad, customLanguagesToLoad);
-                                        await SendStatusMessageAsync($"{languageNames} nyelv(ek) betöltve!");
+                                        await SendStatusMessageAsync($"{languageNames} nyelv betöltve!");
                                     }
                                 }
                                 else
@@ -292,6 +312,23 @@ public sealed partial class MainService(
                                 await settingsService.HandleSettingsMessageAsync(settingsMessage.Settings);
                             }
                             break;
+                        case IpcMessageType.RecreateLanguageDatabaseMessage:
+                            var recreateMessage = JsonSerializer.Deserialize<RecreateLanguageDatabaseMessage>(line);
+                            if (recreateMessage != null)
+                            {
+                                await SendStatusMessageAsync("Nyelvi adatbázis újragenerálása...");
+                                await languageService.RecreateDatabaseOfLanguage(recreateMessage.Language);
+                                await SendStatusMessageAsync("Nyelvi adatbázis újragenerálva!");
+                            }
+                            break;
+                        case IpcMessageType.ServiceShutdownMessage:
+                            var shutdownMessage = JsonSerializer.Deserialize<ServiceShutdownMessage>(line);
+                            if (shutdownMessage != null)
+                            {
+                                await SendStatusMessageAsync("Szolgáltatás leállítása...");
+                                Environment.Exit(0);
+                            }
+                            break;
                         default:
                             logger.LogWarning("Unknown message type: {Type}", ipcMessage.Type);
                             break;
@@ -305,7 +342,7 @@ public sealed partial class MainService(
         }
     }
 
-    public async Task SendSettingsMessageAsync()
+    private async Task SendSettingsMessageAsync()
     {
         if (_pipeStreamWriter == null)
         {
@@ -325,28 +362,45 @@ public sealed partial class MainService(
         }
     }
 
-    private void AcceptSuggestion(int number, bool wasCtrlUsed = false)
+    private void AcceptSuggestion(int? number, string? word, bool wasCtrlUsed = false)
     {
-        if (settingsService.AppSettings.StartAtOne)
+        if (number is null && word is null)
         {
-            number--;
-            if (number < 0)
-            {
-                number = 9;
-            }
+            logger.LogError("Can't accept suggestion because number and word is both null");
+            return;
         }
-        if (_lastSuggestions.Count > number)
+
+        if (number is not null)
+        {
+            if (settingsService.AppSettings.StartAtOne)
+            {
+                number--;
+                if (number < 0)
+                {
+                    number = 9;
+                }
+            }
+            if (_lastSuggestions.Count > number)
+            {
+                _ = SendStatusMessageAsync("Javaslat elfogadása...");
+                var suggestion = _lastSuggestions[number.Value].word;
+                inputSimulatorService.SimulateInputString(suggestion.RemoveFirst(_currentBuffer), wasCtrlUsed);
+                _ = SendStatusMessageAsync("Javaslat elfogadva!");
+                logger.LogInformation("Accepted suggestion: {Suggestion}", suggestion);
+            }
+            else
+            {
+                logger.LogWarning("Invalid suggestion index: {Number}", number);
+            }
+        } 
+        else if (word is not null)
         {
             _ = SendStatusMessageAsync("Javaslat elfogadása...");
-            string suggestion = _lastSuggestions[number].word;
-            inputSimulator.SimulateInputString(suggestion.RemoveFirst(_currentBuffer), wasCtrlUsed);
+            inputSimulatorService.SimulateInputString(word.RemoveFirst(_currentBuffer), wasCtrlUsed);
             _ = SendStatusMessageAsync("Javaslat elfogadva!");
-            logger.LogInformation("Accepted suggestion: {Suggestion}", suggestion);
+            logger.LogInformation("Accepted suggestion: {Suggestion}", word);
         }
-        else
-        {
-            logger.LogWarning("Invalid suggestion index: {Number}", number);
-        }
+        
     }
     private async Task LoadLanguagesFromSettingsAsync()
     {
@@ -411,7 +465,7 @@ public sealed partial class MainService(
         try
         {
             _lastSuggestions = suggestions;
-            keyboardCapturer.AreSuggestionsShowing = true;
+            keyboardCapturerService.AreSuggestionsShowing = true;
             SuggestionMessage message = new(suggestions, caretPosition);
             string json = JsonSerializer.Serialize(message);
             await _pipeStreamWriter.WriteLineAsync(json);
