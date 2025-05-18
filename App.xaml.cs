@@ -608,12 +608,43 @@ namespace QuickType
             }
         }
 
-        private new void Exit()
+        private async new Task Exit()
         {
-            Task.Run(SendServiceShutdownAsync);
-            serviceProcess?.Kill();
-            base.Exit();
+            try
+            {
+                if (_pipeClient is { IsConnected: true })
+                {
+                    await SendServiceShutdownAsync();
+                }
+
+                if (serviceProcess is { HasExited: false })
+                {
+                    serviceProcess.Kill();
+                }
+
+                if (_host != null)
+                {
+                    await _hostCancellationTokenSource.CancelAsync();
+
+                    await _host.StopAsync(TimeSpan.FromSeconds(5));
+                }
+
+                await _pipeListenerCancellationTokenSource?.CancelAsync()!;
+                _pipeStreamWriter?.Dispose();
+                _pipeStreamReader?.Dispose();
+                _pipeClient?.Dispose();
+                _hostCancellationTokenSource.Dispose();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error during shutdown: {ex.Message}");
+            }
+            finally
+            {
+                base.Exit();
+            }
         }
+
 
         public async Task SendRecreateLanguageDatabaseAsync(CustomLanguageDefinition language)
         {
