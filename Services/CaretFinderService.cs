@@ -16,11 +16,11 @@ namespace QuickType.Services
 {
     public class CaretFinderService
     {
-        public unsafe CaretRectangle? GetCaretPos()
+        public unsafe CaretRectangle? GetCaretPosition()
         {
-            HWND foregroundHWND = PInvoke.GetForegroundWindow();
+            var foregroundHwnd = PInvoke.GetForegroundWindow();
 
-            if (foregroundHWND == nint.Zero)
+            if (foregroundHwnd == nint.Zero)
             {
                 return null;
             }
@@ -35,15 +35,15 @@ namespace QuickType.Services
                 return null;
             }
 
-            Guid guid = typeof(IAccessible).GUID;
-            HRESULT hresult = PInvoke.AccessibleObjectFromWindow(foregroundHWND, 0xFFFFFFF8, in guid, out void* ppvObject);
+            var guid = typeof(IAccessible).GUID;
+            var hresult = PInvoke.AccessibleObjectFromWindow(foregroundHwnd, 0xFFFFFFF8, in guid, out void* ppvObject);
 
 
             if (hresult.Succeeded && ppvObject is not null)
             {
                 if (Marshal.GetObjectForIUnknown((nint)ppvObject) is IAccessible accessibleObj)
                 {
-                    accessibleObj.accLocation(out int left, out int top, out int width, out int height, 0);
+                    accessibleObj.accLocation(out var left, out var top, out var width, out var height, 0);
 
                     if (left != 0 || top != 0 || width != 0 || height != 0)
                     {
@@ -63,10 +63,26 @@ namespace QuickType.Services
 
             if (pgui.rcCaret is { Width: 0, Height: 0 } || caretPos is { X: 0, Y: 0 } )
             {
-                return null;
+                return GetMousePosition();
             }
 
             return new CaretRectangle(caretPos.X, caretPos.Y, pgui.rcCaret.Width, pgui.rcCaret.Height);
+        }
+
+        private CaretRectangle? GetMousePosition()
+        {
+            if (PInvoke.GetCursorPos(out var mousePos) == 0)
+            {
+                return null;
+            }
+
+
+            return new CaretRectangle(
+                mousePos.X,
+                mousePos.Y,
+                1,
+                1
+            );
         }
     }
 }

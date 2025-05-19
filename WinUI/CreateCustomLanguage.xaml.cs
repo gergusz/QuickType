@@ -35,6 +35,8 @@ namespace QuickType.WinUI
         {
             this.InitializeComponent();
 
+            ExtendsContentIntoTitleBar = true;
+
             HasAccentsToggle.IsOn = false;
             UsesHybridTrieToggle.IsOn = true;
             FrequencyThresholdNumberBox.Value = 10;

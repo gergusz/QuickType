@@ -98,7 +98,7 @@ public sealed partial class MainService(
 
             if (_currentBuffer.Length > 1 && !string.IsNullOrWhiteSpace(str))
             {
-                var caretRectangle = caretFinderService.GetCaretPos();
+                var caretRectangle = caretFinderService.GetCaretPosition();
                 var suggestions = suggestionService.GetSuggestions(languageService.LoadedLanguages, _currentBuffer, 
                     settingsService.AppSettings.IgnoreAccent, settingsService.AppSettings.MaxSuggestions);
                 if (suggestions.Count > 0)
@@ -135,6 +135,7 @@ public sealed partial class MainService(
             case "\r":
             case " ":
             case "\n":
+            case "\t":
                 _currentBuffer = string.Empty;
                 _ = SendSuggestionsCloseMessageAsync();
                 break;

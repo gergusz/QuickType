@@ -50,7 +50,7 @@
                 </StackPanel>
 
                 <!-- Uses Hybrid Trie -->
-                <ToggleSwitch x:Name="UsesHybridTrieToggle" Header="HybridTrie használata" OnContent="HybridTrie" OffContent="MemoryTrie"/>
+                <ToggleSwitch x:Name="UsesHybridTrieToggle" Header="Használt tárolási technológia" OnContent="HybridTrie" OffContent="MemoryTrie"/>
                 <TextBlock Text="MemoryTrie csak memóriában tárolja el a szavakat, a HybridTrie a megadott gyakorisági küszöb alatt egy helyi adatbázisban tárolja el a ritkább szavakat, míg a gyakoriabbakat memóriába tárolja. Nagyobb méretű szótáraknál érdemes alkalmazni a HybridTrie-t." TextWrapping="Wrap" Style="{StaticResource CaptionTextBlockStyle}"></TextBlock>
 
                 <!-- Frequency Threshold -->

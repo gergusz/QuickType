@@ -39,7 +39,7 @@
                 <Grid>
                     <StackPanel MaxWidth="1000"
                     HorizontalAlignment="Stretch"
-                    Spacing="{StaticResource SettingsCardSpacing}" Margin="0 0 0 20">
+                    Spacing="{StaticResource SettingsCardSpacing}" Margin="0 20 0 20">
                         <StackPanel.ChildrenTransitions>
                             <EntranceThemeTransition FromVerticalOffset="50"/>
                             <RepositionThemeTransition IsStaggeringEnabled="True"/>
@@ -65,7 +65,7 @@
                                 <DataTemplate x:DataType="local:LanguageViewModel">
                                     <controls:SettingsCard Header="{x:Bind Name}" Description="{x:Bind Description}">
                                         <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <Button Tag="{x:Bind Name}" Click="ReloadUnloadedCustomLanguage_Click" Visibility="{x:Bind IsCustom}">
+                                            <Button Tag="{x:Bind InternalName}" Click="ReloadUnloadedCustomLanguage_Click" Visibility="{x:Bind IsCustom}">
                                                 <FontIcon Glyph="&#xE72C;" FontSize="19"></FontIcon>
                                             </Button>
                                             <NumberBox Value="{x:Bind Priority, Mode=TwoWay}" 
@@ -74,9 +74,9 @@
                                                        Width="60"
                                                        SpinButtonPlacementMode="Compact"
                                                        ValueChanged="LoadedLanguagePriorityInput_ValueChanged" 
-                                                       Tag="{x:Bind Name}"/>
+                                                       Tag="{x:Bind InternalName}"/>
                                             <Button Content="Eltávolítás" 
-                                                Tag="{x:Bind Name}"
+                                                Tag="{x:Bind InternalName}"
                                                 Click="UnloadLanguage_Click"/>
                                         </StackPanel>
                                     </controls:SettingsCard>
@@ -99,11 +99,11 @@
                                 <DataTemplate x:DataType="local:LanguageViewModel">
                                     <controls:SettingsCard Header="{x:Bind Name}" Description="{x:Bind Description}">
                                         <StackPanel Orientation="Horizontal" Height="32">
-                                            <Button Tag ="{x:Bind Name}" Click="RemoveUnloadedCustomLanguage_Click" Margin="0 0 8 0">
+                                            <Button Tag ="{x:Bind InternalName}" Click="RemoveUnloadedCustomLanguage_Click" Margin="0 0 8 0">
                                                 <FontIcon Glyph="&#xE74D;" FontSize="19"></FontIcon>
                                             </Button>
                                             <Button Content="Betöltés" 
-                                                    Tag="{x:Bind Name}"
+                                                    Tag="{x:Bind InternalName}"
                                                     Click="LoadUnloadedCustomLanguage_Click"/>
                                         </StackPanel>
                                     </controls:SettingsCard>
@@ -116,14 +116,14 @@
                         <TextBlock Style="{StaticResource SettingsSectionHeaderTextBlockStyle}" Text="Ajánlatok"/>
                         <controls:SettingsExpander Header="Ajánlatok" HeaderIcon="{winUi:FontIcon Glyph=&#xE82F;}">
                             <controls:SettingsExpander.Items>
-                                <controls:SettingsCard Header="Maximum ajánlott szó darabszáma" Description="Előfordulhat kevesebb ajánlat is">
+                                <controls:SettingsCard Header="Ajánlott szavak maximum darabszáma" Description="Előfordulhat kevesebb ajánlat is">
                                     <Slider StepFrequency="1" Minimum="1" Maximum="10" Value="{x:Bind Settings.MaxSuggestions, Mode=TwoWay}"></Slider>
                                 </controls:SettingsCard>
-                                <controls:SettingsCard Header="Indexelés kezdése egynél" Description="Ajánlatoknál az első elem a billentyűzeten az `1`-es számbillentyűnek feleljen meg, vagy a `0`-ásnak">
-                                    <ToggleSwitch IsOn="{x:Bind Settings.StartAtOne, Mode=TwoWay}"></ToggleSwitch>
+                                <controls:SettingsCard Header="Indexelés kezdése egynél" Description="Control + szám billentyűkombináció használatánál az első elem melyik számnak feleljen meg">
+                                    <ToggleSwitch IsOn="{x:Bind Settings.StartAtOne, Mode=TwoWay}" OffContent="0" OnContent="1"></ToggleSwitch>
                                 </controls:SettingsCard>
-                                <controls:SettingsCard Header="Ékezetek javítása" Description="Mutasson-e ajánlatokat ékezettől függetlenül">
-                                    <ToggleSwitch IsOn="{x:Bind Settings.IgnoreAccent, Mode=TwoWay}"></ToggleSwitch>
+                                <controls:SettingsCard Header="Ékezetek észlelése" Description="Mutasson-e ajánlatokat ékezetektől függetlenül">
+                                    <ToggleSwitch IsOn="{x:Bind Settings.IgnoreAccent, Mode=TwoWay}" OffContent="Ki" OnContent="Be"></ToggleSwitch>
                                 </controls:SettingsCard>
                             </controls:SettingsExpander.Items>
                         </controls:SettingsExpander>

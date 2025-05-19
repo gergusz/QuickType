@@ -13,10 +13,12 @@ public class LanguageViewModel
         set;
     } = string.Empty;
 
+    private string? _internalName;
+
     public string? InternalName
     {
-        get;
-        set;
+        get => _internalName ?? Name;
+        set => _internalName = value;
     }
 
     public string Description

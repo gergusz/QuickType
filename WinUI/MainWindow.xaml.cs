@@ -150,9 +150,10 @@ public sealed partial class MainWindow : WindowEx
         {
             viewModelList.Add(new()
             {
-                Name = internalLanguage.Name,
+                Name = internalLanguage.Name == nameof(Hungarian) ? "Magyar" : "Angol",
                 Priority = internalLanguage.Priority,
                 Description = "Beépített nyelv",
+                InternalName = internalLanguage.Name,
                 IsCustom = false
             });
         }
