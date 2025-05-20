@@ -10,24 +10,28 @@ namespace QuickType.Services
 {
     public class SuggestionService
     {
-        internal List<Word> GetSuggestions(List<BaseLanguage> loadedLanguages, string currentBuffer, bool ignoreAccent, int maxSuggestionCount)
+        internal List<Word> GetSuggestions(List<BaseLanguage> loadedLanguages, string currentPuffer, bool ignoreAccent, int maxSuggestionCount)
         {
             var suggestions = new List<Word>();
-            foreach (var language in loadedLanguages.OrderBy(x => x.Priority))
+            foreach (var language in loadedLanguages.OrderByDescending(x => x.Priority))
             {
                 if (!language.IsTrieLoaded)
                 {
                     continue;
                 }
 
-                var languageSuggestions = language.SearchByPrefix(currentBuffer, ignoreAccent, maxSuggestionCount);
+                var languageSuggestions = language.SearchByPrefix(currentPuffer, ignoreAccent, maxSuggestionCount);
                 suggestions.AddRange(languageSuggestions);
+
+                suggestions = [.. suggestions.DistinctBy(x => x.word)];
+
                 if (suggestions.Count >= maxSuggestionCount)
                 {
                     break;
                 }
             }
-            return suggestions.Distinct().ToList();
+
+            return suggestions;
         }
     }
 }

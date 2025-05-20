@@ -27,7 +27,7 @@ public sealed partial class MainService(
     ILogger<MainService> logger) : BackgroundService
 {
 
-    private string _currentBuffer = string.Empty;
+    private string _currentPuffer = string.Empty;
 
     private List<Word> _lastSuggestions = [];
 
@@ -96,10 +96,10 @@ public sealed partial class MainService(
         {
             ProcessKeyboardInput(str);
 
-            if (_currentBuffer.Length > 1 && !string.IsNullOrWhiteSpace(str))
+            if (_currentPuffer.Length > 1 && !string.IsNullOrWhiteSpace(str))
             {
                 var caretRectangle = caretFinderService.GetCaretPosition();
-                var suggestions = suggestionService.GetSuggestions(languageService.LoadedLanguages, _currentBuffer, 
+                var suggestions = suggestionService.GetSuggestions(languageService.LoadedLanguages, _currentPuffer, 
                     settingsService.AppSettings.IgnoreAccent, settingsService.AppSettings.MaxSuggestions);
                 if (suggestions.Count > 0)
                 {
@@ -109,7 +109,7 @@ public sealed partial class MainService(
                 else
                 {
                     _ = SendStatusMessageAsync("Nem található javaslat!");
-                    logger.LogInformation("No suggestions found for: {CurrentBuffer}", _currentBuffer);
+                    logger.LogInformation("No suggestions found for: {CurrentBuffer}", _currentPuffer);
                     if (keyboardCapturerService.AreSuggestionsShowing)
                     {
                         _ = SendSuggestionsCloseMessageAsync();
@@ -126,29 +126,29 @@ public sealed partial class MainService(
     {
         switch (str)
         {
-            case "\b" when _currentBuffer.Length <= 1:
-                _currentBuffer = string.Empty;
+            case "\b" when _currentPuffer.Length <= 1:
+                _currentPuffer = string.Empty;
                 break;
             case "\b":
-                _currentBuffer = _currentBuffer[..^1];
+                _currentPuffer = _currentPuffer[..^1];
                 break;
             case "\r":
             case " ":
             case "\n":
             case "\t":
-                _currentBuffer = string.Empty;
+                _currentPuffer = string.Empty;
                 _ = SendSuggestionsCloseMessageAsync();
                 break;
             case not null when str.Contains(@"\c"):
                 AcceptSuggestion((int)char.GetNumericValue(str[^1]), null, true); //intre cast, mert doublet ad vissza alapból (lásd ¼)
-                _currentBuffer = string.Empty;
+                _currentPuffer = string.Empty;
                 _ = SendSuggestionsCloseMessageAsync();
                 break;
             default:
-                _currentBuffer += str;
+                _currentPuffer += str;
                 break;
         }
-        logger.LogDebug("Current buffer: {CurrentBuffer}", _currentBuffer);
+        logger.LogDebug("Current buffer: {CurrentBuffer}", _currentPuffer);
     }
 
     private async Task SendSuggestionsCloseMessageAsync()
@@ -385,7 +385,7 @@ public sealed partial class MainService(
             {
                 _ = SendStatusMessageAsync("Javaslat elfogadása...");
                 var suggestion = _lastSuggestions[number.Value].word;
-                inputSimulatorService.SimulateInputString(suggestion.RemoveFirst(_currentBuffer), wasCtrlUsed);
+                inputSimulatorService.SimulateInputString(suggestion.RemoveFirst(_currentPuffer), wasCtrlUsed);
                 _ = SendStatusMessageAsync("Javaslat elfogadva!");
                 logger.LogInformation("Accepted suggestion: {Suggestion}", suggestion);
             }
@@ -397,7 +397,7 @@ public sealed partial class MainService(
         else if (word is not null)
         {
             _ = SendStatusMessageAsync("Javaslat elfogadása...");
-            inputSimulatorService.SimulateInputString(word.RemoveFirst(_currentBuffer), wasCtrlUsed);
+            inputSimulatorService.SimulateInputString(word.RemoveFirst(_currentPuffer), wasCtrlUsed);
             _ = SendStatusMessageAsync("Javaslat elfogadva!");
             logger.LogInformation("Accepted suggestion: {Suggestion}", word);
         }

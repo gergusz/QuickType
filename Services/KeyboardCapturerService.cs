@@ -18,7 +18,7 @@ namespace QuickType.Services
         private const nuint WM_SYSKEYDOWN = 0x0104;
 
         private readonly ConcurrentQueue<(uint vkCode, uint scanCode, byte[] keyState)> _keyQueue = new();
-        private readonly AutoResetEvent KeyEvent = new(false);
+        private readonly AutoResetEvent _keyEvent = new(false);
         private Thread? _backgroundThread;
 #pragma warning disable S1450 // Private fields only used as local variables in methods should become local variables
         private HOOKPROC? _hookCallbackDelegate;
@@ -36,17 +36,17 @@ namespace QuickType.Services
             {
                 var keyboardStruct = Marshal.PtrToStructure<KBDLLHOOKSTRUCT>(lParam);
 
-                uint vkCode = keyboardStruct.vkCode;
-                uint scanCode = keyboardStruct.scanCode;
-                byte[] keyState = new byte[256];
+                var vkCode = keyboardStruct.vkCode;
+                var scanCode = keyboardStruct.scanCode;
+                var keyState = new byte[256];
                 BuildKeyState(keyState);
 
-                bool isCtrlDown = (keyState[(int)VirtualKey.Control] & 0x80) != 0;
-                bool isNumber = vkCode is >= (uint)VirtualKey.Number0 and <= (uint)VirtualKey.Number9 ||
+                var isCtrlDown = (keyState[(int)VirtualKey.Control] & 0x80) != 0;
+                var isNumber = vkCode is >= (uint)VirtualKey.Number0 and <= (uint)VirtualKey.Number9 ||
                                 vkCode is >= (uint)VirtualKey.NumberPad0 and <= (uint)VirtualKey.NumberPad9;
 
                 _keyQueue.Enqueue((vkCode, scanCode, keyState));
-                KeyEvent.Set();
+                _keyEvent.Set();
 
                 if (isCtrlDown && isNumber && AreSuggestionsShowing)
                 {
@@ -69,7 +69,7 @@ namespace QuickType.Services
 
                 _hookCallbackDelegate = HookProcedure;
 
-                string mainModuleName = Process.GetCurrentProcess().MainModule!.ModuleName;
+                var mainModuleName = Process.GetCurrentProcess().MainModule!.ModuleName;
                 if (mainModuleName is null)
                 {
                     throw new InvalidOperationException("Main module name is null.");
@@ -80,7 +80,7 @@ namespace QuickType.Services
 
                 if (_hookHandle == null || _hookHandle.IsInvalid)
                 {
-                    int errorCode = Marshal.GetLastWin32Error();
+                    var errorCode = Marshal.GetLastWin32Error();
                     throw new InvalidOperationException($"Failed to set keyboard hook. Error code: {errorCode}");
                 }
 
@@ -97,7 +97,7 @@ namespace QuickType.Services
         {
             if (_backgroundThread is not null)
             {
-                KeyEvent.Set();
+                _keyEvent.Set();
                 _backgroundThread.Join();
                 _backgroundThread = null;
             }
@@ -112,11 +112,11 @@ namespace QuickType.Services
         {
             while (true)
             {
-                KeyEvent.WaitOne();
+                _keyEvent.WaitOne();
 
                 while (_keyQueue.TryDequeue(out var key))
                 {
-                    string str = TranslateKey(key.vkCode, key.scanCode, key.keyState);
+                    var str = TranslateKey(key.vkCode, key.scanCode, key.keyState);
                     if (!string.IsNullOrEmpty(str) && KeyboardEvent is not null)
                     {
                         KeyboardEvent(str);
@@ -184,7 +184,7 @@ namespace QuickType.Services
 
         private void BuildKeyState(byte[] keyState)
         {
-            for (int i = 0; i < 256; i++)
+            for (var i = 0; i < 256; i++)
             {
                 int state = PInvoke.GetAsyncKeyState(i);
                 if ((state & 0x8000) != 0)

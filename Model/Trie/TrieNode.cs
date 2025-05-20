@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -8,25 +9,33 @@ namespace QuickType.Model.Trie
 {
     public class TrieNode
     {
-        public List<(char Key, TrieNode Node)> Children { get; } = [];
+        private readonly Dictionary<char, TrieNode> _children = new();
+        public IReadOnlyDictionary<char, TrieNode> Children => _children;
+
         public bool IsEndOfWord { get; set; }
         public int Frequency { get; set; }
-        public TrieNode() { }
 
-        public TrieNode GetChild(char letter)
+
+        public TrieNode? GetChild(char letter)
         {
-            return Children.FirstOrDefault(x => x.Key == letter).Node;
+            return _children.GetValueOrDefault(letter);
         }
 
         public TrieNode AddChild(char letter)
         {
-            var node = GetChild(letter);
-            if (node is not null) return node;
+            if (_children.TryGetValue(letter, out var existingNode))
+            {
+                return existingNode;
+            }
 
-            node = new TrieNode();
-            Children.Add((letter, node));
-            return node;
+            var newNode = new TrieNode();
+            _children[letter] = newNode;
+            return newNode;
         }
 
+        public void Clear()
+        {
+            _children.Clear();
+        }
     }
 }

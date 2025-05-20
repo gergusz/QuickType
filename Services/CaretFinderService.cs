@@ -16,6 +16,8 @@ namespace QuickType.Services
 {
     public class CaretFinderService
     {
+        private const uint OBJID_CARET = 0xFFFFFFF8;
+
         public unsafe CaretRectangle? GetCaretPosition()
         {
             var foregroundHwnd = PInvoke.GetForegroundWindow();
@@ -36,8 +38,7 @@ namespace QuickType.Services
             }
 
             var guid = typeof(IAccessible).GUID;
-            var hresult = PInvoke.AccessibleObjectFromWindow(foregroundHwnd, 0xFFFFFFF8, in guid, out void* ppvObject);
-
+            var hresult = PInvoke.AccessibleObjectFromWindow(foregroundHwnd, OBJID_CARET, in guid, out void* ppvObject);
 
             if (hresult.Succeeded && ppvObject is not null)
             {
@@ -47,6 +48,8 @@ namespace QuickType.Services
 
                     if (left != 0 || top != 0 || width != 0 || height != 0)
                     {
+                        Marshal.Release((nint)ppvObject);
+
                         return new CaretRectangle(left, top, width, height);
                     }
                 }

@@ -7,14 +7,9 @@ using Microsoft.Extensions.Options;
 
 namespace QuickType.Model.Trie
 {
-    public class MemoryTrie : ITrie
+    public sealed class MemoryTrie : ITrie
     {
-        private readonly TrieNode _root;
-
-        public MemoryTrie()
-        {
-            _root = new();
-        }
+        private readonly TrieNode _root = new();
 
         public void Insert(string word, int frequency)
         {
@@ -35,7 +30,7 @@ namespace QuickType.Model.Trie
 
             if (ignoreAccent && accentDictionary is not null)
             {
-                SearchWithAccents(_root, prefix, 0, "", result, accentDictionary);
+                SearchByPrefixWithAccents(_root, prefix, 0, new(), result, accentDictionary);
             }
             else
             {
@@ -50,13 +45,13 @@ namespace QuickType.Model.Trie
                     }
                 }
 
-                Dfs(current, prefix, result);
+                Dfs(current, new StringBuilder(prefix), result);
             }
 
             return [.. result.OrderByDescending(x => x.frequency).Take(amount)];
         }
 
-        private void SearchWithAccents(TrieNode? node, string prefix, int index, string currentPrefix,
+        private void SearchByPrefixWithAccents(TrieNode? node, string prefix, int index, StringBuilder currentPrefix,
             List<Word> result, Dictionary<char, List<char>> accentDictionary)
         {
             if (node is null)
@@ -83,21 +78,24 @@ namespace QuickType.Model.Trie
                 var child = node.GetChild(c);
                 if (child is not null)
                 {
-                    SearchWithAccents(child, prefix, index + 1, currentPrefix + c, result, accentDictionary);
+                    currentPrefix.Append(c);
+                    SearchByPrefixWithAccents(child, prefix, index + 1, currentPrefix, result, accentDictionary);
+                    currentPrefix.Length--;
                 }
             }
         }
-
-        private void Dfs(TrieNode node, string currentWord, List<Word> result)
+        private void Dfs(TrieNode node, StringBuilder currentWord, List<Word> result)
         {
             if (node.IsEndOfWord)
             {
-                result.Add((currentWord, node.Frequency));
+                result.Add((currentWord.ToString(), node.Frequency));
             }
 
-            foreach (var (key, child) in node.Children)
+            foreach (var pair in node.Children)
             {
-                Dfs(child, currentWord + key, result);
+                currentWord.Append(pair.Key);
+                Dfs(pair.Value, currentWord, result);
+                currentWord.Length--;
             }
         }
 
@@ -109,7 +107,7 @@ namespace QuickType.Model.Trie
             GC.SuppressFinalize(this);
         }
 
-        protected virtual void Dispose(bool disposing)
+        private void Dispose(bool disposing)
         {
             if (_disposed)
             {
@@ -118,28 +116,26 @@ namespace QuickType.Model.Trie
 
             if (disposing)
             {
-                if (_root != null)
-                {
-                    ClearTrieNode(_root);
-                }
+                ClearTrieNode(_root);
+
             }
 
             _disposed = true;
         }
 
-        private void ClearTrieNode(TrieNode node)
+        private void ClearTrieNode(TrieNode? node)
         {
             if (node == null)
             {
                 return;
             }
 
-            foreach (var child in node.Children)
+            foreach (var children in node.Children)
             {
-                ClearTrieNode(child.Node);
+                ClearTrieNode(children.Value);
             }
 
-            node.Children.Clear();
+            node.Clear();
         }
 
         ~MemoryTrie()

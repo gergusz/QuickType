@@ -92,6 +92,7 @@ namespace QuickType
             _isServiceOnly = args.Contains("--service") || args.Contains("-s");
 
             Current = this;
+            //https://github.com/microsoft/microsoft-ui-xaml/issues/9658#issuecomment-2266183134
             Environment.SetEnvironmentVariable("MICROSOFT_WINDOWSAPPRUNTIME_BASE_DIRECTORY", AppContext.BaseDirectory);
             this.InitializeComponent();
 
