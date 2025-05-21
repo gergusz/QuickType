@@ -141,7 +141,6 @@ public sealed partial class MainService(
                 break;
             case not null when str.Contains(@"\c"):
                 AcceptSuggestion((int)char.GetNumericValue(str[^1]), null, true); //intre cast, mert doublet ad vissza alapból (lásd ¼)
-                _currentPuffer = string.Empty;
                 _ = SendSuggestionsCloseMessageAsync();
                 break;
             default:
@@ -401,7 +400,8 @@ public sealed partial class MainService(
             _ = SendStatusMessageAsync("Javaslat elfogadva!");
             logger.LogInformation("Accepted suggestion: {Suggestion}", word);
         }
-        
+
+        _currentPuffer = string.Empty;
     }
     private async Task LoadLanguagesFromSettingsAsync()
     {

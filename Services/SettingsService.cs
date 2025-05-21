@@ -20,6 +20,10 @@ namespace QuickType.Services
     {
         private readonly string _filePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "QuickType", "settings.json");
         private readonly SemaphoreSlim _settingsSemaphore = new(1, 1);
+        private readonly JsonSerializerOptions _options = new() 
+        {
+            WriteIndented = true
+        };
 
         public AppSettings AppSettings
         {
@@ -56,12 +60,7 @@ namespace QuickType.Services
             await _settingsSemaphore.WaitAsync();
             try
             {
-                var options = new JsonSerializerOptions
-                {
-                    WriteIndented = true
-                };
-
-                var json = JsonSerializer.Serialize(AppSettings, options);
+                var json = JsonSerializer.Serialize(AppSettings, _options);
 
                 var directory = Path.GetDirectoryName(_filePath);
                 if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))

@@ -329,7 +329,7 @@ namespace QuickType
             {
                 string json = JsonSerializer.Serialize(new SelectionMessage(placement, null));
                 await _pipeStreamWriter.WriteLineAsync(json);
-                Debug.WriteLine($"Sent selection message to client: {placement}");
+                Debug.WriteLine($"Sent selection message to service: {placement}");
             }
             catch (Exception ex)
             {
@@ -349,7 +349,7 @@ namespace QuickType
             {
                 string json = JsonSerializer.Serialize(new SelectionMessage(null, word));
                 await _pipeStreamWriter.WriteLineAsync(json);
-                Debug.WriteLine($"Sent selection message to client: {word}");
+                Debug.WriteLine($"Sent selection message to service: {word}");
             }
             catch (Exception ex)
             {
@@ -389,7 +389,7 @@ namespace QuickType
             {
                 string json = JsonSerializer.Serialize(new SettingsMessage(settings));
                 await _pipeStreamWriter.WriteLineAsync(json);
-                Debug.WriteLine("Sent settings to server");
+                Debug.WriteLine("Sent settings to service");
             }
             catch (Exception ex)
             {
