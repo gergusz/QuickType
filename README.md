@@ -12,3 +12,7 @@ Tóth Gergő
  
 ## Futtatás
 A projekt betöltése, és NuGet csomagok telepítése után a *QuickType (Unpackaged)* opciót futási profilnak kiválasztva elindul az alkalmazás
+
+## Szótárak forrása / Credits for the dictionary
+
+[Hermit Dave FrequencyWords](https://github.com/hermitdave/FrequencyWords)
