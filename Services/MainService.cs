@@ -56,9 +56,9 @@ public sealed partial class MainService(
                 await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
             }
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
-            logger.LogInformation("Operation was cancelled.");
+            logger.LogInformation(ex, "Operation was cancelled");
         }
         catch (Exception ex)
         {
@@ -70,11 +70,14 @@ public sealed partial class MainService(
             keyboardCapturerService.KeyboardEvent -= KeyboardCapturer_KeyboardEvent;
             keyboardCapturerService.Stop();
 
+#pragma warning disable S6966
             _pipeServer?.Dispose();
             _pipeStreamWriter?.Dispose();
             _statusPipeStreamWriter?.Dispose();
             _pipeStreamReader?.Dispose();
             _pipeListenerCancellationTokenSource?.Cancel();
+            _pipeListenerCancellationTokenSource?.Dispose();
+#pragma warning restore S6966
 
             logger.LogInformation("MainService stopped.");
         }
@@ -438,9 +441,9 @@ public sealed partial class MainService(
                 AutoFlush = true
             };
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
-            logger.LogInformation("Operation was cancelled.");
+            logger.LogInformation(ex, "Operation was cancelled");
         }
         catch (Exception ex)
         {

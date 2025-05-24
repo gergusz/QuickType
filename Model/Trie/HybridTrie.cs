@@ -5,27 +5,28 @@ using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 using QuickType.Model.Languages;
 
 namespace QuickType.Model.Trie;
 
-public class HybridTrie : ITrie
+public partial class HybridTrie : ITrie
 {
     private MemoryTrie _memoryTrie;
-    private int _frequencyThreshhold;
+    private int _frequencyThreshold;
     private readonly string _connectionString;
     private readonly string? _embeddedResourceName;
     private readonly string? _filePath;
     private readonly string? _readString;
 
-    private readonly object _dbLock = new();
+    private readonly Lock _dbLock = new();
 
     internal HybridTrie(string name, int frequencyThreshold = 10)
     {
         _memoryTrie = new MemoryTrie();
         _connectionString =
             $@"Data Source={Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "QuickType")}\Languages\{name}.db";
-        _frequencyThreshhold = frequencyThreshold;
+        _frequencyThreshold = frequencyThreshold;
 
         if (name == nameof(Hungarian))
         {
@@ -49,11 +50,22 @@ public class HybridTrie : ITrie
         FillMemoryTrie();
     }
 
-    public HybridTrie(string name, string filePath, string readString, int frequencyThreshhold = 10) 
-        : this (name, frequencyThreshhold)
+    public HybridTrie(string name, string filePath, string readString, int frequencyThreshold = 10) 
     {
+        _memoryTrie = new MemoryTrie();
+        _connectionString =
+            $@"Data Source={Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "QuickType")}\Languages\{name}.db";
+        _frequencyThreshold = frequencyThreshold;
         _filePath = filePath;
         _readString = readString;
+
+        if (!Path.Exists($"{_connectionString.Split("=")[1]}"))
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(_connectionString.Split("=")[1])!);
+            RecreateDatabase();
+        }
+
+        FillMemoryTrie();
     }
 
     public void RecreateDatabase()
@@ -211,7 +223,7 @@ public class HybridTrie : ITrie
             insertCmd.Parameters.AddWithValue("$frequency", frequency);
             insertCmd.ExecuteNonQuery();
 
-            if (frequency > _frequencyThreshhold)
+            if (frequency > _frequencyThreshold)
             {
                 _memoryTrie.Insert(word, frequency);
             }
@@ -230,7 +242,7 @@ public class HybridTrie : ITrie
                     FROM Words
                     WHERE Frequency > $frequency
                     ";
-            selectCmd.Parameters.AddWithValue("$frequency", _frequencyThreshhold);
+            selectCmd.Parameters.AddWithValue("$frequency", _frequencyThreshold);
             using var reader = selectCmd.ExecuteReader();
             while (reader.Read())
             {
@@ -276,7 +288,7 @@ public class HybridTrie : ITrie
 
                 selectCmd.CommandText = commandText.ToString();
                 selectCmd.Parameters.AddWithValue("$prefix", prefix);
-                selectCmd.Parameters.AddWithValue("$frequency", _frequencyThreshhold);
+                selectCmd.Parameters.AddWithValue("$frequency", _frequencyThreshold);
                 selectCmd.Parameters.AddWithValue("$amount", amount - result.Count);
 
                 for (var i = 0; i < accentedPrefixes.Count; i++)
@@ -295,7 +307,7 @@ public class HybridTrie : ITrie
                     LIMIT $amount
                     ";
                 selectCmd.Parameters.AddWithValue("$prefix", prefix);
-                selectCmd.Parameters.AddWithValue("$frequency", _frequencyThreshhold);
+                selectCmd.Parameters.AddWithValue("$frequency", _frequencyThreshold);
                 selectCmd.Parameters.AddWithValue("$amount", amount - result.Count);
             }
 
@@ -309,7 +321,7 @@ public class HybridTrie : ITrie
         }
     }
 
-    private List<string> GetAllAccentedVariantOfPrefix(string prefix, Dictionary<char, List<char>> accentDictionary)
+    private static List<string> GetAllAccentedVariantOfPrefix(string prefix, Dictionary<char, List<char>> accentDictionary)
     {
         var result = new List<string>();
 
@@ -345,12 +357,12 @@ public class HybridTrie : ITrie
 
     public void ChangeFrequency(int newFrequency)
     {
-        if (newFrequency == _frequencyThreshhold)
+        if (newFrequency == _frequencyThreshold)
         {
             return;
         }
 
-        _frequencyThreshhold = newFrequency;
+        _frequencyThreshold = newFrequency;
         _memoryTrie = new MemoryTrie();
         FillMemoryTrie();
     }

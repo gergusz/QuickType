@@ -8,7 +8,7 @@ public class CustomLanguageDefinition
     public bool HasAccents { get; init; }
     public Dictionary<char, List<char>>? AccentDict { get; init; }
     public bool UsesHybridTrie { get; init; }
-    public int? FrequencyThreshhold { get; init; }
+    public int? FrequencyThreshold { get; init; }
     public string FilePath { get; init; }
     public string ReadString { get; init; }
     public bool IsLoaded { get; set; }
@@ -19,7 +19,7 @@ public class CustomLanguageDefinition
         bool hasAccents,
         Dictionary<char, List<char>>? accentDict,
         bool usesHybridTrie,
-        int? frequencyThreshhold,
+        int? frequencyThreshold,
         string filePath,
         string readString,
         bool isLoaded)
@@ -29,7 +29,7 @@ public class CustomLanguageDefinition
         HasAccents = hasAccents;
         AccentDict = accentDict;
         UsesHybridTrie = usesHybridTrie;
-        FrequencyThreshhold = frequencyThreshhold;
+        FrequencyThreshold = frequencyThreshold;
         FilePath = filePath;
         ReadString = readString;
         IsLoaded = isLoaded;

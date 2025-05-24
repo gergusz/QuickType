@@ -15,16 +15,16 @@ public class LanguageService
 
     public void ChangeLanguagePriorities(params List<(int priority, string languageName)> newPriorityList)
     {
-        foreach (var newPriority in newPriorityList)
+        foreach (var (priority, languageName) in newPriorityList)
         {
-            if (LoadedLanguages.All(x => x.Name != newPriority.languageName))
+            if (LoadedLanguages.All(x => x.Name != languageName))
             {
                 continue;   
             }
-            var language = LoadedLanguages.First(x => x.Name == newPriority.languageName);
-            if (language.Priority != newPriority.priority)
+            var language = LoadedLanguages.First(x => x.Name == languageName);
+            if (language.Priority != priority)
             {
-                language.Priority = newPriority.priority;
+                language.Priority = priority;
             }
         }
     }
@@ -58,7 +58,7 @@ public class LanguageService
             select new CustomLanguage(customLanguage.Name, 
                 customLanguage.Priority, customLanguage.HasAccents, 
                 customLanguage.AccentDict, customLanguage.UsesHybridTrie, 
-                customLanguage.FrequencyThreshhold, customLanguage.FilePath, 
+                customLanguage.FrequencyThreshold, customLanguage.FilePath, 
                 customLanguage.ReadString));
 
         foreach (var language in languagesToBeLoaded)
@@ -137,13 +137,13 @@ public class LanguageService
 
     public void DeleteLanguages(List<CustomLanguageDefinition> languagesToDelete)
     {
-        foreach (var languageDefinition in languagesToDelete)
+        foreach (var languageDefinition in languagesToDelete.Select(x => x.Name))
         {
-            if (LoadedLanguages.All(x => x.Name == languageDefinition.Name))
+            if (LoadedLanguages.All(x => x.Name == languageDefinition))
             {
                 continue;
             }
-            var language = LoadedLanguages.First(x => x.Name == languageDefinition.Name);
+            var language = LoadedLanguages.First(x => x.Name == languageDefinition);
             if (language is CustomLanguage customLanguage)
             {
                 customLanguage.DeleteLanguage();
@@ -151,7 +151,7 @@ public class LanguageService
             }
             else
             {
-                throw new InvalidOperationException($"Language {languageDefinition.Name} is not a CustomLanguage.");
+                throw new InvalidOperationException($"Language {languageDefinition} is not a CustomLanguage.");
             }
         }
     }

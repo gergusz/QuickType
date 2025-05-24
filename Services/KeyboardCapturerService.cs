@@ -26,7 +26,11 @@ public class KeyboardCapturerService
     public delegate void KeyboardDelegate(string str);
     public event KeyboardDelegate? KeyboardEvent;
 
-    public bool AreSuggestionsShowing = false;
+    public bool AreSuggestionsShowing
+    {
+        get;
+        set;
+    }
 
     private LRESULT HookProcedure(int nCode, WPARAM wParam, LPARAM lParam)
     {
@@ -67,12 +71,7 @@ public class KeyboardCapturerService
 
             _hookCallbackDelegate = HookProcedure;
 
-            var mainModuleName = Process.GetCurrentProcess().MainModule!.ModuleName;
-            if (mainModuleName is null)
-            {
-                throw new InvalidOperationException("Main module name is null.");
-            }
-
+            var mainModuleName = Process.GetCurrentProcess().MainModule!.ModuleName ?? throw new InvalidOperationException("Main module name is null.");
             var moduleHandle = PInvoke.GetModuleHandle(mainModuleName);
             _hookHandle = PInvoke.SetWindowsHookEx(WINDOWS_HOOK_ID.WH_KEYBOARD_LL, _hookCallbackDelegate, moduleHandle, 0);
 
@@ -128,7 +127,7 @@ public class KeyboardCapturerService
         }
     }
 
-    private string TranslateKey(uint vkCode, uint scanCode, byte[] keyState)
+    private static string TranslateKey(uint vkCode, uint scanCode, byte[] keyState)
     {
         switch (vkCode)
         {
@@ -180,7 +179,7 @@ public class KeyboardCapturerService
         }
     }
 
-    private void BuildKeyState(byte[] keyState)
+    private static void BuildKeyState(byte[] keyState)
     {
         for (var i = 0; i < 256; i++)
         {
