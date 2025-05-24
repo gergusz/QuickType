@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace QuickType.Model.Trie
+namespace QuickType.Model.Trie;
+
+public interface ITrie : IDisposable
 {
-    public interface ITrie : IDisposable
-    {
-        void Insert(string word, int frequency);
-        List<Word> SearchByPrefix(string prefix, bool ignoreAccent, int amount = 5, Dictionary<char, List<char>>? accentDictionary = null);
-    }
+    void Insert(string word, int frequency);
+    List<Word> SearchByPrefix(string prefix, bool ignoreAccent, int amount = 5, Dictionary<char, List<char>>? accentDictionary = null);
 }

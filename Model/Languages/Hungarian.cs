@@ -1,30 +1,21 @@
-﻿using System;
-using System.IO;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Text.RegularExpressions;
-using System.Reflection;
-using QuickType.Model.Trie;
+﻿using System.Collections.Generic;
 
-namespace QuickType.Model.Languages
+namespace QuickType.Model.Languages;
+
+internal class Hungarian : BaseLanguage
 {
-    internal class Hungarian : BaseLanguage
+    internal Hungarian(int priority)
     {
-        internal Hungarian(int priority)
+        Priority = priority;
+        Name = nameof(Hungarian);
+        HasAccents = true;
+        AccentDict = new Dictionary<char, List<char>>()
         {
-            Priority = priority;
-            Name = nameof(Hungarian);
-            HasAccents = true;
-            AccentDict = new Dictionary<char, List<char>>()
-            {
-                {'a', ['á'] },
-                {'e', ['é'] },
-                {'i', ['í'] },
-                {'o', ['ó', 'ö', 'ő'] },
-                {'u', ['ú', 'ü', 'ű'] }
-            };
-        }
+            {'a', ['á'] },
+            {'e', ['é'] },
+            {'i', ['í'] },
+            {'o', ['ó', 'ö', 'ő'] },
+            {'u', ['ú', 'ü', 'ű'] }
+        };
     }
 }

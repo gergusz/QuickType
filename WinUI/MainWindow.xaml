@@ -18,6 +18,8 @@
         <Page.Resources>
             <x:Double x:Key="SettingsCardSpacing">4</x:Double>
 
+            <!-- ReSharper disable Xaml.StaticResourceNotResolved -->
+            <!-- https://learn.microsoft.com/en-us/windows/apps/develop/platform/xaml/xaml-theme-resources#the-xaml-type-ramp -->
             <Style x:Key="SettingsSectionHeaderTextBlockStyle"
                    BasedOn="{StaticResource BodyStrongTextBlockStyle}"
                    TargetType="TextBlock">

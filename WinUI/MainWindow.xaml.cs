@@ -3,16 +3,12 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
-using Windows.Globalization.DateTimeFormatting;
-using CommunityToolkit.WinUI.Controls;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using QuickType.Model;
 using QuickType.Model.IPC;
 using QuickType.Model.Languages;
 using WinUIEx;
-using System.Xml.Linq;
-using Microsoft.UI.Xaml.Media;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -21,7 +17,7 @@ namespace QuickType.WinUI;
 /// <summary>
 /// An empty window that can be used on its own or navigated to within a Frame.
 /// </summary>
-public sealed partial class MainWindow : WindowEx
+public sealed partial class MainWindow
 {
     public AppSettings Settings { get; private set; } = new();
 
@@ -44,12 +40,12 @@ public sealed partial class MainWindow : WindowEx
         UnloadedInternalLanguagesExpander.ItemsSource = UnloadedInternalLanguageItems;
         UnloadedCustomLanguagesExpander.ItemsSource = UnloadedCustomLanguageItems;
 
-        Task.Run(() => App.Current.RequestSettingsAsync());
+        Task.Run(() => App.Current!.RequestSettingsAsync());
     }
 
     private void MainWindow_Closed(object sender, WindowEventArgs args)
     {
-        App.Current.MainWindow = null;
+        App.Current!.MainWindow = null;
     }
 
     public void HandleStatusMessage(StatusMessage statusMessage)
@@ -71,7 +67,7 @@ public sealed partial class MainWindow : WindowEx
         });
     }
 
-    private void Settings_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+    private void Settings_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         _ = SaveSettings();
 
@@ -83,7 +79,7 @@ public sealed partial class MainWindow : WindowEx
 
     public async Task SaveSettings()
     {
-        await App.Current.SendSettingsMessageAsync(Settings);
+        await App.Current!.SendSettingsMessageAsync(Settings);
     }
 
     private async void AddCustomLanguage_OnClick(object sender, RoutedEventArgs e)
@@ -98,11 +94,6 @@ public sealed partial class MainWindow : WindowEx
 
         if (createdLanguage != null)
         {
-            if (Settings.CustomLanguages == null)
-            {
-                Settings.CustomLanguages = new List<CustomLanguageDefinition>();
-            }
-
             Settings.CustomLanguages.Add(createdLanguage);
             UpdateAllLanguageLists();
             this.Bindings.Update();
@@ -114,7 +105,7 @@ public sealed partial class MainWindow : WindowEx
     {
         var tcs = new TaskCompletionSource();
 
-        window.Closed += (s, e) =>
+        window.Closed += (_, _) =>
         {
             tcs.SetResult();
         };
@@ -365,7 +356,7 @@ public sealed partial class MainWindow : WindowEx
         UnloadedInternalLanguageItems.Clear();
         UnloadedCustomLanguageItems.Clear();
 
-        Task.Run(() => App.Current.RequestSettingsAsync(true));
+        Task.Run(() => App.Current!.RequestSettingsAsync(true));
     }
 
     private void ReloadUnloadedCustomLanguage_Click(object sender, RoutedEventArgs e)
@@ -379,7 +370,7 @@ public sealed partial class MainWindow : WindowEx
                 var customLanguage = Settings.CustomLanguages.FirstOrDefault(l => l.Name == languageName && l.IsLoaded);
                 if (customLanguage != null)
                 {
-                    Task.Run(() => App.Current.SendRecreateLanguageDatabaseAsync(customLanguage));
+                    Task.Run(() => App.Current!.SendRecreateLanguageDatabaseAsync(customLanguage));
                 }
             }
         }

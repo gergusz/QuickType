@@ -1,41 +1,35 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 
-namespace QuickType.Model.Trie
+namespace QuickType.Model.Trie;
+
+public class TrieNode
 {
-    public class TrieNode
+    private readonly Dictionary<char, TrieNode> _children = new();
+    public IReadOnlyDictionary<char, TrieNode> Children => _children;
+
+    public bool IsEndOfWord { get; set; }
+    public int Frequency { get; set; }
+
+
+    public TrieNode? GetChild(char letter)
     {
-        private readonly Dictionary<char, TrieNode> _children = new();
-        public IReadOnlyDictionary<char, TrieNode> Children => _children;
+        return _children.GetValueOrDefault(letter);
+    }
 
-        public bool IsEndOfWord { get; set; }
-        public int Frequency { get; set; }
-
-
-        public TrieNode? GetChild(char letter)
+    public TrieNode AddChild(char letter)
+    {
+        if (_children.TryGetValue(letter, out var existingNode))
         {
-            return _children.GetValueOrDefault(letter);
+            return existingNode;
         }
 
-        public TrieNode AddChild(char letter)
-        {
-            if (_children.TryGetValue(letter, out var existingNode))
-            {
-                return existingNode;
-            }
+        var newNode = new TrieNode();
+        _children[letter] = newNode;
+        return newNode;
+    }
 
-            var newNode = new TrieNode();
-            _children[letter] = newNode;
-            return newNode;
-        }
-
-        public void Clear()
-        {
-            _children.Clear();
-        }
+    public void Clear()
+    {
+        _children.Clear();
     }
 }

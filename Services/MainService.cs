@@ -5,15 +5,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using QuickType.Model.Trie;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
 using System.Linq;
-using System.Text;
 using System.Text.Json;
 using QuickType.Model;
 using QuickType.Model.IPC;
-using QuickType.Model.Languages;
 
 namespace QuickType.Services;
 
@@ -36,7 +33,6 @@ public sealed partial class MainService(
     private StreamWriter? _pipeStreamWriter;
     private StreamWriter? _statusPipeStreamWriter;
     private StreamReader? _pipeStreamReader;
-    private Task? _pipeListenerTask;
     private CancellationTokenSource? _pipeListenerCancellationTokenSource;
 
 
@@ -45,9 +41,9 @@ public sealed partial class MainService(
         try
         {
             await InitPipeServerAsync(stoppingToken);
-            _pipeStreamReader = new StreamReader(_pipeServer);
+            _pipeStreamReader = new StreamReader(_pipeServer!);
             _pipeListenerCancellationTokenSource = new CancellationTokenSource();
-            _pipeListenerTask = PipeListenerTaskAsync(_pipeListenerCancellationTokenSource.Token);
+            _ = PipeListenerTaskAsync(_pipeListenerCancellationTokenSource.Token);
 
             await LoadLanguagesFromSettingsAsync();
 
@@ -166,7 +162,7 @@ public sealed partial class MainService(
             }
 
             keyboardCapturerService.AreSuggestionsShowing = false;
-            string json = JsonSerializer.Serialize(new CloseMessage());
+            var json = JsonSerializer.Serialize(new CloseMessage());
             await _pipeStreamWriter.WriteLineAsync(json);
             logger.LogInformation("Sent close message to client.");
             await SendStatusMessageAsync("Javaslatok ablak bezárása...");
@@ -174,9 +170,6 @@ public sealed partial class MainService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error sending close message: {Message}", ex.Message);
-        }
-        finally
-        {
         }
     }
 
@@ -186,7 +179,7 @@ public sealed partial class MainService(
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                string? line = await _pipeStreamReader.ReadLineAsync(cancellationToken);
+                var line = await _pipeStreamReader!.ReadLineAsync(cancellationToken);
                 if (line != null)
                 {
                     var ipcMessage = JsonSerializer.Deserialize<BaseIpcMessage>(line);
@@ -227,9 +220,9 @@ public sealed partial class MainService(
                             if (settingsMessage != null)
                             {
                                 var oldInternalLanguages = settingsService.AppSettings.LoadedInternalLanguages ?? [];
-                                var newInternalLanguages = settingsMessage.Settings.LoadedInternalLanguages ?? [];
+                                var newInternalLanguages = settingsMessage.Settings.LoadedInternalLanguages;
                                 var oldCustomLanguages = settingsService.AppSettings.CustomLanguages ?? [];
-                                var newCustomLanguages = settingsMessage.Settings.CustomLanguages ?? [];
+                                var newCustomLanguages = settingsMessage.Settings.CustomLanguages;
 
                                 var languageCompositionChanged = !oldInternalLanguages.Select(l => l.Name).OrderBy(n => n)
                                                                 .SequenceEqual(newInternalLanguages.Select(l => l.Name).OrderBy(n => n)) ||
@@ -265,7 +258,7 @@ public sealed partial class MainService(
                                             .ToList();
 
                                         await SendStatusMessageAsync($"{string.Join(", ", languagesToDelete.Select(x => x.Name))} nyelv törlése...");
-                                        await languageService.DeleteLanguagesAsyncTask(languagesToDelete);
+                                        languageService.DeleteLanguages(languagesToDelete);
                                         await SendStatusMessageAsync($"{string.Join(", ", languagesToDelete.Select(x => x.Name))} nyelv törölve!");
                                     }
 
@@ -352,7 +345,7 @@ public sealed partial class MainService(
         try
         {
             var message = new SettingsMessage(settingsService.AppSettings);
-            string json = JsonSerializer.Serialize(message);
+            var json = JsonSerializer.Serialize(message);
             await _pipeStreamWriter.WriteLineAsync(json);
             logger.LogInformation("Sent settings through IPC");
         }
@@ -409,8 +402,8 @@ public sealed partial class MainService(
         {
             logger.LogInformation("Loading languages from settings...");
 
-            var internalLanguages = settingsService.AppSettings.LoadedInternalLanguages ?? [];
-            var customLanguages = settingsService.AppSettings.CustomLanguages ?? [];
+            var internalLanguages = settingsService.AppSettings.LoadedInternalLanguages;
+            var customLanguages = settingsService.AppSettings.CustomLanguages;
 
             await languageService.LoadLanguagesAsyncTask(internalLanguages, customLanguages);
 
@@ -468,7 +461,7 @@ public sealed partial class MainService(
             _lastSuggestions = suggestions;
             keyboardCapturerService.AreSuggestionsShowing = true;
             SuggestionMessage message = new(suggestions, caretPosition);
-            string json = JsonSerializer.Serialize(message);
+            var json = JsonSerializer.Serialize(message);
             await _pipeStreamWriter.WriteLineAsync(json);
             logger.LogInformation("Sent suggestions to client: {Suggestions}, {CaretPosition}", string.Join(", ", suggestions), caretPosition);
         }
@@ -488,7 +481,7 @@ public sealed partial class MainService(
         try
         {
             StatusMessage statusMessage = new(message);
-            string json = JsonSerializer.Serialize(statusMessage);
+            var json = JsonSerializer.Serialize(statusMessage);
             await _statusPipeStreamWriter.WriteLineAsync(json);
             logger.LogInformation("Sent status message to client: {Message}", message);
         }

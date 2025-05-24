@@ -1,17 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 using QuickType.Model.Languages;
 
 namespace QuickType.Model;
 public sealed partial class AppSettings : INotifyPropertyChanged
 {
-    [JsonIgnore] private bool _startWithWindows = false;
+    [JsonIgnore] private bool _startWithWindows;
 
     public bool StartWithWindows
     {
@@ -68,7 +64,7 @@ public sealed partial class AppSettings : INotifyPropertyChanged
         }
     }
 
-    [JsonIgnore] private bool _ignoreAccent = false;
+    [JsonIgnore] private bool _ignoreAccent;
 
     public bool IgnoreAccent
     {
@@ -122,7 +118,7 @@ public sealed partial class AppSettings : INotifyPropertyChanged
     }
 
     //https://learn.microsoft.com/en-us/dotnet/desktop/wpf/data/how-to-implement-property-change-notification
-    public event PropertyChangedEventHandler PropertyChanged;
+    public event PropertyChangedEventHandler? PropertyChanged;
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {

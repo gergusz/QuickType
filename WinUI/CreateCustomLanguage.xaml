@@ -3,7 +3,6 @@
     x:Class="QuickType.WinUI.CreateCustomLanguage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:local="using:QuickType.WinUI"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:winUiEx="using:WinUIEx"
@@ -29,6 +28,8 @@
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
             <StackPanel Spacing="16">
                 <!-- Name -->
+                <!-- ReSharper disable Xaml.StaticResourceNotResolved -->
+                <!-- https://learn.microsoft.com/en-us/windows/apps/develop/platform/xaml/xaml-theme-resources#the-xaml-type-ramp  -->
                 <TextBlock Text="Nyelv neve" Style="{StaticResource BodyStrongTextBlockStyle}"/>
                 <TextBox x:Name="NameTextBox" PlaceholderText="Adja meg a nyelv nevét"/>
 
@@ -72,7 +73,7 @@
                             Grid.Column="0"
                             PlaceholderText="Válassza ki a szótárfájlt" 
                             IsReadOnly="True"/>
-                    <Button x:Name="BrowseButton" 
+                    <Button 
                            Grid.Column="1"
                            Content="Tallózás" 
                            Margin="8,0,0,0"
@@ -94,14 +95,14 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
             
-            <Button x:Name="CancelButton" 
+            <Button
                    Grid.Column="1"
                    Content="Mégse" 
                    Style="{StaticResource AccentButtonStyle}"
                    Margin="0,0,8,0"
                    Click="CancelButton_Click"/>
             
-            <Button x:Name="CreateButton" 
+            <Button
                    Grid.Column="2"
                    Content="Létrehozás" 
                    Style="{StaticResource AccentButtonStyle}"
