@@ -70,7 +70,7 @@ public sealed partial class MainService(
             keyboardCapturerService.KeyboardEvent -= KeyboardCapturer_KeyboardEvent;
             keyboardCapturerService.Stop();
 
-#pragma warning disable S6966
+#pragma warning disable S6966 //cannot await ValueTask?
             _pipeServer?.Dispose();
             _pipeStreamWriter?.Dispose();
             _statusPipeStreamWriter?.Dispose();
@@ -159,11 +159,6 @@ public sealed partial class MainService(
 
         try
         {
-            if (!keyboardCapturerService.AreSuggestionsShowing)
-            {
-                return;
-            }
-
             keyboardCapturerService.AreSuggestionsShowing = false;
             var json = JsonSerializer.Serialize(new CloseMessage());
             await _pipeStreamWriter.WriteLineAsync(json);
